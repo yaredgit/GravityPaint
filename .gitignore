@@ -1,0 +1,47 @@
+# Build directories
+build/
+build-*/
+cmake-build-*/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# Emscripten output
+*.wasm
+*.js
+*.html
+*.data
+web/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Save files
+*.dat
+*.save
+
+# Dependencies (if not using submodules)
+# extern/*/
+
+# Package manager
+vcpkg_installed/
