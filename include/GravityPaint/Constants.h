@@ -11,7 +11,7 @@ constexpr float TARGET_FRAME_TIME = 1.0f / TARGET_FPS;
 // Physics constants
 constexpr float PHYSICS_SCALE = 30.0f;  // Pixels per meter for Box2D
 constexpr float DEFAULT_GRAVITY_X = 0.0f;
-constexpr float DEFAULT_GRAVITY_Y = 2.0f;  // Reduced gravity for better gameplay
+constexpr float DEFAULT_GRAVITY_Y = 6.0f;  // Moderate gravity for good pace
 constexpr float MAX_GRAVITY_STRENGTH = 30.0f;
 constexpr float GRAVITY_STROKE_LIFETIME = 2.0f;
 constexpr float GRAVITY_STROKE_RADIUS = 150.0f;
@@ -19,8 +19,8 @@ constexpr int PHYSICS_VELOCITY_ITERATIONS = 8;
 constexpr int PHYSICS_POSITION_ITERATIONS = 3;
 
 // Gameplay
-constexpr float MIN_SWIPE_DISTANCE = 30.0f;
-constexpr float MAX_SWIPE_DISTANCE = 500.0f;
+constexpr float MIN_SWIPE_DISTANCE = 15.0f;   // Reduced for better sensitivity
+constexpr float MAX_SWIPE_DISTANCE = 300.0f;  // Reach max strength faster
 constexpr int MAX_ACTIVE_STROKES = 5;
 constexpr float ENERGY_TRANSFER_RATE = 0.7f;
 constexpr float ENERGY_DECAY_RATE = 0.1f;
