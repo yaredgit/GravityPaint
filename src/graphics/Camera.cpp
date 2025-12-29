@@ -1,8 +1,9 @@
-#include "Vectoria/graphics/Camera.h"
+#include "GravityPaint/graphics/Camera.h"
 #include <cmath>
 #include <random>
+#include <algorithm>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 Camera::Camera(int screenWidth, int screenHeight)
     : m_screenWidth(screenWidth)
@@ -172,4 +173,4 @@ void Camera::updateShake(float deltaTime) {
     m_shakeOffset = Vec2(dist(rng), dist(rng)) * currentIntensity;
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

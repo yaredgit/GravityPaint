@@ -1,13 +1,13 @@
-#include "Vectoria/graphics/Renderer.h"
-#include "Vectoria/graphics/Camera.h"
-#include "Vectoria/physics/PhysicsObject.h"
-#include "Vectoria/physics/GravityField.h"
-#include "Vectoria/physics/DeformableSurface.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/graphics/Renderer.h"
+#include "GravityPaint/graphics/Camera.h"
+#include "GravityPaint/physics/PhysicsObject.h"
+#include "GravityPaint/physics/GravityField.h"
+#include "GravityPaint/physics/DeformableSurface.h"
+#include "GravityPaint/Constants.h"
 #include <cmath>
 #include <random>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 Renderer::Renderer() = default;
 
@@ -27,10 +27,27 @@ bool Renderer::initialize(SDL_Window* window, int width, int height) {
 
     SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
 
+    // Initialize SDL_ttf
+    if (TTF_Init() == -1) {
+        SDL_Log("TTF_Init failed: %s", TTF_GetError());
+    }
+
+    // Try to load a font
+    m_fontPath = "assets/fonts/default.ttf";
+
     return true;
 }
 
 void Renderer::shutdown() {
+    // Clean up fonts
+    for (auto& pair : m_fonts) {
+        if (pair.second) {
+            TTF_CloseFont(pair.second);
+        }
+    }
+    m_fonts.clear();
+    TTF_Quit();
+
     if (m_renderer) {
         SDL_DestroyRenderer(m_renderer);
         m_renderer = nullptr;
@@ -452,28 +469,87 @@ void Renderer::drawVector(const Vec2& origin, const Vec2& direction, float magni
     drawLine(end, arrowRight, color, 2.0f);
 }
 
-void Renderer::drawText(const std::string& text, const Vec2& position, const Color& color, float size) {
-    // Simplified text rendering - in production use SDL_ttf
-    Vec2 screenPos = worldToScreen(position);
-    SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
-    
-    // Draw placeholder rectangles for each character
-    float charWidth = size * 0.6f;
-    float x = screenPos.x;
-    
-    for (char c : text) {
-        if (c != ' ') {
-            SDL_FRect charRect = {x, screenPos.y, charWidth * 0.8f, size};
-            SDL_RenderDrawRectF(m_renderer, &charRect);
-        }
-        x += charWidth;
+TTF_Font* Renderer::getFont(float size) {
+    int sizeInt = static_cast<int>(size);
+    auto it = m_fonts.find(sizeInt);
+    if (it != m_fonts.end()) {
+        return it->second;
     }
+    
+    TTF_Font* font = TTF_OpenFont(m_fontPath.c_str(), sizeInt);
+    if (!font) {
+        SDL_Log("Failed to load font %s at size %d: %s", m_fontPath.c_str(), sizeInt, TTF_GetError());
+        return nullptr;
+    }
+    
+    m_fonts[sizeInt] = font;
+    return font;
+}
+
+void Renderer::drawText(const std::string& text, const Vec2& position, const Color& color, float size) {
+    if (text.empty()) return;
+    
+    TTF_Font* font = getFont(size);
+    if (!font) {
+        // Fallback to rectangles if font not available
+        Vec2 screenPos = worldToScreen(position);
+        SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
+        float charWidth = size * 0.6f;
+        float x = screenPos.x;
+        for (char c : text) {
+            if (c != ' ') {
+                SDL_FRect charRect = {x, screenPos.y, charWidth * 0.8f, size};
+                SDL_RenderDrawRectF(m_renderer, &charRect);
+            }
+            x += charWidth;
+        }
+        return;
+    }
+    
+    Vec2 screenPos = worldToScreen(position);
+    SDL_Color sdlColor = {color.r, color.g, color.b, color.a};
+    
+    SDL_Surface* surface = TTF_RenderText_Blended(font, text.c_str(), sdlColor);
+    if (!surface) return;
+    
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, surface);
+    if (texture) {
+        SDL_FRect destRect = {screenPos.x, screenPos.y, static_cast<float>(surface->w), static_cast<float>(surface->h)};
+        SDL_RenderCopyF(m_renderer, texture, nullptr, &destRect);
+        SDL_DestroyTexture(texture);
+    }
+    SDL_FreeSurface(surface);
 }
 
 void Renderer::drawTextCentered(const std::string& text, const Vec2& position, const Color& color, float size) {
-    float totalWidth = text.length() * size * 0.6f;
-    Vec2 startPos(position.x - totalWidth / 2, position.y - size / 2);
-    drawText(text, startPos, color, size);
+    if (text.empty()) return;
+    
+    TTF_Font* font = getFont(size);
+    if (!font) {
+        float totalWidth = text.length() * size * 0.6f;
+        Vec2 startPos(position.x - totalWidth / 2, position.y - size / 2);
+        drawText(text, startPos, color, size);
+        return;
+    }
+    
+    Vec2 screenPos = worldToScreen(position);
+    SDL_Color sdlColor = {color.r, color.g, color.b, color.a};
+    
+    SDL_Surface* surface = TTF_RenderText_Blended(font, text.c_str(), sdlColor);
+    if (!surface) return;
+    
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, surface);
+    if (texture) {
+        SDL_FRect destRect = {
+            screenPos.x - surface->w / 2.0f,
+            screenPos.y - surface->h / 2.0f,
+            static_cast<float>(surface->w),
+            static_cast<float>(surface->h)
+        };
+        SDL_RenderCopyF(m_renderer, texture, nullptr, &destRect);
+        SDL_DestroyTexture(texture);
+    }
+    SDL_FreeSurface(surface);
 }
 
 void Renderer::drawTexture(SDL_Texture* texture, const Rect& destRect, float angle, const Color& tint) {
@@ -549,4 +625,4 @@ void Renderer::drawGrid(float cellSize, const Color& color) {
     }
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

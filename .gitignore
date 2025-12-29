@@ -45,3 +45,7 @@ desktop.ini
 
 # Package manager
 vcpkg_installed/
+vcpkg/
+
+# Downloaded dependencies (use build scripts to fetch)
+deps/

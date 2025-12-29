@@ -1,10 +1,11 @@
-#include "Vectoria/ui/HUD.h"
-#include "Vectoria/graphics/Renderer.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/ui/HUD.h"
+#include "GravityPaint/graphics/Renderer.h"
+#include "GravityPaint/Constants.h"
 #include <cmath>
 #include <sstream>
+#include <algorithm>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 HUD::HUD(int screenWidth, int screenHeight)
     : m_screenWidth(screenWidth)
@@ -46,6 +47,7 @@ void HUD::render(Renderer* renderer) {
 
     renderScore(renderer);
     renderLevelInfo(renderer);
+    renderLives(renderer);
     renderGravityIndicator(renderer);
     renderProgress(renderer);
     renderMessage(renderer);
@@ -63,26 +65,42 @@ void HUD::render(Renderer* renderer) {
 }
 
 bool HUD::handleTouch(const TouchPoint& touch) {
-    if (!m_visible) return false;
+    if (!m_visible) {
+        return false;
+    }
+
+    // Store callback to execute after loop (avoid iterator invalidation)
+    std::function<void()> pendingCallback = nullptr;
 
     for (auto& button : m_buttons) {
         if (!button->isVisible) continue;
 
-        if (button->bounds.contains(touch.position)) {
-            if (touch.isActive) {
+        bool inside = button->bounds.contains(touch.position);
+        
+        if (touch.isActive) {
+            // Mouse/touch is down
+            if (inside) {
                 button->isPressed = true;
                 button->isHovered = true;
-            } else if (button->isPressed) {
-                button->isPressed = false;
-                if (button->onClick) {
-                    button->onClick();
-                }
-                return true;
             }
         } else {
+            // Mouse/touch released - check if this was a click
+            if (inside && button->isPressed && button->onClick) {
+                pendingCallback = button->onClick;
+            }
             button->isPressed = false;
-            button->isHovered = false;
+            button->isHovered = inside;
         }
+    }
+
+    // Execute callback after loop is done
+    if (pendingCallback) {
+        // Play click sound
+        if (m_clickSoundCallback) {
+            m_clickSoundCallback();
+        }
+        pendingCallback();
+        return true;
     }
 
     return false;
@@ -148,6 +166,11 @@ void HUD::setStrokeCount(int current, int max) {
 void HUD::setStars(int stars, int maxStars) {
     m_stars = stars;
     m_maxStars = maxStars;
+}
+
+void HUD::setLives(int lives, int maxLives) {
+    m_lives = lives;
+    m_maxLives = maxLives;
 }
 
 void HUD::showMessage(const std::string& message, float duration) {
@@ -262,6 +285,28 @@ void HUD::renderLevelInfo(Renderer* renderer) {
     ss.str("");
     ss << "STROKES: " << m_strokeCount << "/" << m_maxStrokes;
     renderer->drawTextCentered(ss.str(), Vec2(centerX, HUD_PADDING + 80), Color(180, 180, 200), 18.0f);
+}
+
+void HUD::renderLives(Renderer* renderer) {
+    // Draw hearts/lives in top right area
+    float startX = m_screenWidth - HUD_PADDING - (m_maxLives * 30);
+    float y = HUD_PADDING + 5;
+    
+    for (int i = 0; i < m_maxLives; ++i) {
+        float x = startX + i * 30;
+        Color heartColor = (i < m_lives) ? Color(255, 80, 80) : Color(60, 60, 60);
+        
+        // Simple heart shape using circles
+        renderer->drawCircle(Vec2(x, y + 5), 8.0f, heartColor, true);
+        renderer->drawCircle(Vec2(x + 10, y + 5), 8.0f, heartColor, true);
+        // Triangle bottom (approximate with filled rectangle for simplicity)
+        renderer->drawTriangle(
+            Vec2(x - 7, y + 5),
+            Vec2(x + 17, y + 5),
+            Vec2(x + 5, y + 22),
+            heartColor, true
+        );
+    }
 }
 
 void HUD::renderGravityIndicator(Renderer* renderer) {
@@ -390,4 +435,4 @@ void HUD::updateScorePopups(float deltaTime) {
     }
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

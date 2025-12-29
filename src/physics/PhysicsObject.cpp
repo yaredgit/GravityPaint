@@ -1,8 +1,9 @@
-#include "Vectoria/physics/PhysicsObject.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/physics/PhysicsObject.h"
+#include "GravityPaint/Constants.h"
 #include <cmath>
+#include <algorithm>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 int PhysicsObject::s_nextId = 1;
 
@@ -45,56 +46,57 @@ void PhysicsObject::createBody(b2World* world, const Vec2& position) {
     b2BodyDef bodyDef;
     bodyDef.type = b2_dynamicBody;
     bodyDef.position = b2Vec2(position.x / PHYSICS_SCALE, position.y / PHYSICS_SCALE);
-    bodyDef.linearDamping = 0.1f;
-    bodyDef.angularDamping = 0.1f;
+    bodyDef.linearDamping = 0.5f;
+    bodyDef.angularDamping = 0.3f;
 
     m_body = world->CreateBody(&bodyDef);
-    m_body->GetUserData().pointer = reinterpret_cast<uintptr_t>(this);
+    if (!m_body) return;
+    
+    b2BodyUserData& userData = m_body->GetUserData();
+    userData.pointer = reinterpret_cast<uintptr_t>(this);
 
+    float scaledSize = m_size * 20.0f / PHYSICS_SCALE;
+
+    // Create shapes outside switch to avoid scope issues
+    b2CircleShape circleShape;
+    b2PolygonShape polyShape;
+    
     b2FixtureDef fixtureDef;
     fixtureDef.density = 1.0f;
     fixtureDef.friction = 0.3f;
     fixtureDef.restitution = 0.6f;
 
-    float scaledSize = m_size * 20.0f / PHYSICS_SCALE;
-
     switch (m_type) {
         case ObjectType::Ball:
-        case ObjectType::Blob: {
-            b2CircleShape circle;
-            circle.m_radius = scaledSize;
-            fixtureDef.shape = &circle;
+        case ObjectType::Blob:
+            circleShape.m_radius = scaledSize;
+            fixtureDef.shape = &circleShape;
             break;
-        }
 
-        case ObjectType::Box: {
-            b2PolygonShape box;
-            box.SetAsBox(scaledSize, scaledSize);
-            fixtureDef.shape = &box;
+        case ObjectType::Box:
+            polyShape.SetAsBox(scaledSize, scaledSize);
+            fixtureDef.shape = &polyShape;
             break;
-        }
 
         case ObjectType::Triangle: {
-            b2PolygonShape triangle;
             b2Vec2 vertices[3];
             vertices[0].Set(0, -scaledSize);
             vertices[1].Set(-scaledSize, scaledSize);
             vertices[2].Set(scaledSize, scaledSize);
-            triangle.Set(vertices, 3);
-            fixtureDef.shape = &triangle;
+            polyShape.Set(vertices, 3);
+            fixtureDef.shape = &polyShape;
             break;
         }
 
         case ObjectType::Star: {
             // Simplified star as pentagon
-            b2PolygonShape star;
             b2Vec2 vertices[5];
             for (int i = 0; i < 5; ++i) {
                 float angle = (i * 2.0f * 3.14159f / 5.0f) - 3.14159f / 2.0f;
                 vertices[i].Set(std::cos(angle) * scaledSize, std::sin(angle) * scaledSize);
             }
-            star.Set(vertices, 5);
-            fixtureDef.shape = &star;
+            polyShape.Set(vertices, 5);
+            fixtureDef.shape = &polyShape;
             break;
         }
     }
@@ -220,4 +222,4 @@ void PhysicsObject::setActive(bool active) {
     }
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

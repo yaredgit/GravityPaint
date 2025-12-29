@@ -1,8 +1,8 @@
-#include "Vectoria/core/Game.h"
+#include "GravityPaint/core/Game.h"
 #include <SDL.h>
 #include <iostream>
 
-#ifdef VECTORIA_ANDROID
+#ifdef GRAVITYPAINT_ANDROID
 #include <android/log.h>
 #define LOG_TAG "Vectoria"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -19,10 +19,10 @@ int main(int argc, char* argv[]) {
     LOGI("Starting Vectoria...");
 
     // Get screen size for mobile or use defaults
-    int screenWidth = Vectoria::DEFAULT_SCREEN_WIDTH;
-    int screenHeight = Vectoria::DEFAULT_SCREEN_HEIGHT;
+    int screenWidth = GravityPaint::DEFAULT_SCREEN_WIDTH;
+    int screenHeight = GravityPaint::DEFAULT_SCREEN_HEIGHT;
 
-#if defined(VECTORIA_ANDROID) || defined(VECTORIA_IOS)
+#if defined(GRAVITYPAINT_ANDROID) || defined(GRAVITYPAINT_IOS)
     // On mobile, get actual screen size
     SDL_DisplayMode displayMode;
     if (SDL_GetCurrentDisplayMode(0, &displayMode) == 0) {
@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     screenHeight = 960;
 #endif
 
-    auto& game = Vectoria::Game::getInstance();
+    auto& game = GravityPaint::Game::getInstance();
 
     if (!game.initialize(screenWidth, screenHeight)) {
         LOGE("Failed to initialize game!");

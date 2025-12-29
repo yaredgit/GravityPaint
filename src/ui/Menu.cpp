@@ -1,9 +1,9 @@
-#include "Vectoria/ui/Menu.h"
-#include "Vectoria/graphics/Renderer.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/ui/Menu.h"
+#include "GravityPaint/graphics/Renderer.h"
+#include "GravityPaint/Constants.h"
 #include <cmath>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 Menu::Menu(int screenWidth, int screenHeight)
     : m_screenWidth(screenWidth)
@@ -312,4 +312,4 @@ bool LevelSelectMenu::isLevelUnlocked(int level) const {
     return level <= m_unlockedLevels;
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

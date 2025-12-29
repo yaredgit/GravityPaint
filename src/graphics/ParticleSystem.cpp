@@ -1,8 +1,8 @@
-#include "Vectoria/graphics/ParticleSystem.h"
-#include "Vectoria/graphics/Renderer.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/graphics/ParticleSystem.h"
+#include "GravityPaint/graphics/Renderer.h"
+#include "GravityPaint/Constants.h"
 
-namespace Vectoria {
+namespace GravityPaint {
 
 ParticleEmitter::ParticleEmitter(const EmitterConfig& config)
     : m_config(config)
@@ -369,4 +369,4 @@ int ParticleSystem::getTotalParticleCount() const {
     return total;
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

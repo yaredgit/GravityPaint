@@ -1,10 +1,10 @@
-#include "Vectoria/physics/PhysicsWorld.h"
-#include "Vectoria/physics/GravityField.h"
-#include "Vectoria/physics/PhysicsObject.h"
-#include "Vectoria/physics/DeformableSurface.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/physics/PhysicsWorld.h"
+#include "GravityPaint/physics/GravityField.h"
+#include "GravityPaint/physics/PhysicsObject.h"
+#include "GravityPaint/physics/DeformableSurface.h"
+#include "GravityPaint/Constants.h"
 
-namespace Vectoria {
+namespace GravityPaint {
 
 void ContactListener::BeginContact(b2Contact* contact) {
     b2Fixture* fixtureA = contact->GetFixtureA();
@@ -138,7 +138,11 @@ void PhysicsWorld::reset() {
 }
 
 PhysicsObject* PhysicsWorld::createObject(ObjectType type, const Vec2& position, float size) {
+    if (!m_world) return nullptr;
+    
     auto obj = std::make_unique<PhysicsObject>(m_world.get(), type, position, size);
+    if (!obj || !obj->getBody()) return nullptr;
+    
     PhysicsObject* ptr = obj.get();
     m_objects.push_back(std::move(obj));
     return ptr;
@@ -223,35 +227,41 @@ void PhysicsWorld::createBoundaries(float width, float height) {
 
     if (!m_world) return;
 
-    float thickness = 50.0f;
+    float thickness = 20.0f;
     b2BodyDef bodyDef;
     bodyDef.type = b2_staticBody;
-
-    // Bottom
-    bodyDef.position = toMeters(Vec2(width / 2, height + thickness / 2));
-    b2Body* bottom = m_world->CreateBody(&bodyDef);
     b2PolygonShape box;
+    b2FixtureDef fixtureDef;
+    fixtureDef.shape = &box;
+    fixtureDef.friction = 0.3f;
+    fixtureDef.restitution = 0.5f;
+
+    // Bottom - at the bottom edge of screen
+    bodyDef.position = toMeters(Vec2(width / 2, height - thickness / 2));
+    b2Body* bottom = m_world->CreateBody(&bodyDef);
     box.SetAsBox(width / 2 / PHYSICS_SCALE, thickness / 2 / PHYSICS_SCALE);
-    bottom->CreateFixture(&box, 0.0f);
+    bottom->CreateFixture(&fixtureDef);
     m_boundaryBodies.push_back(bottom);
 
     // Top
-    bodyDef.position = toMeters(Vec2(width / 2, -thickness / 2));
+    bodyDef.position = toMeters(Vec2(width / 2, thickness / 2));
     b2Body* top = m_world->CreateBody(&bodyDef);
-    top->CreateFixture(&box, 0.0f);
+    box.SetAsBox(width / 2 / PHYSICS_SCALE, thickness / 2 / PHYSICS_SCALE);
+    top->CreateFixture(&fixtureDef);
     m_boundaryBodies.push_back(top);
 
     // Left
-    bodyDef.position = toMeters(Vec2(-thickness / 2, height / 2));
+    bodyDef.position = toMeters(Vec2(thickness / 2, height / 2));
     b2Body* left = m_world->CreateBody(&bodyDef);
     box.SetAsBox(thickness / 2 / PHYSICS_SCALE, height / 2 / PHYSICS_SCALE);
-    left->CreateFixture(&box, 0.0f);
+    left->CreateFixture(&fixtureDef);
     m_boundaryBodies.push_back(left);
 
     // Right
-    bodyDef.position = toMeters(Vec2(width + thickness / 2, height / 2));
+    bodyDef.position = toMeters(Vec2(width - thickness / 2, height / 2));
     b2Body* right = m_world->CreateBody(&bodyDef);
-    right->CreateFixture(&box, 0.0f);
+    box.SetAsBox(thickness / 2 / PHYSICS_SCALE, height / 2 / PHYSICS_SCALE);
+    right->CreateFixture(&fixtureDef);
     m_boundaryBodies.push_back(right);
 }
 
@@ -332,12 +342,16 @@ bool PhysicsWorld::isObjectInGoal(PhysicsObject* object) const {
     return m_goalZone.contains(object->getPosition());
 }
 
-std::vector<PhysicsObject*> PhysicsWorld::getObjectsInGoal() const {
+std::vector<PhysicsObject*> PhysicsWorld::getObjectsInGoal() {
     std::vector<PhysicsObject*> result;
     if (!m_hasGoalZone) return result;
 
-    for (const auto& obj : m_objects) {
-        if (obj->isInGoal()) {
+    for (auto& obj : m_objects) {
+        // Once in goal, stays counted (sticky)
+        if (obj->hasReachedGoal() || m_goalZone.contains(obj->getPosition())) {
+            if (!obj->hasReachedGoal()) {
+                obj->setReachedGoal(true);
+            }
             result.push_back(obj.get());
         }
     }
@@ -430,4 +444,4 @@ void PhysicsWorld::updateDeformableSurfaces(float deltaTime) {
     }
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

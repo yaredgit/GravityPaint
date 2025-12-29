@@ -1,13 +1,13 @@
-#include "Vectoria/level/LevelManager.h"
-#include "Vectoria/level/Level.h"
-#include "Vectoria/level/Objective.h"
-#include "Vectoria/physics/PhysicsWorld.h"
-#include "Vectoria/physics/PhysicsObject.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/level/LevelManager.h"
+#include "GravityPaint/level/Level.h"
+#include "GravityPaint/level/Objective.h"
+#include "GravityPaint/physics/PhysicsWorld.h"
+#include "GravityPaint/physics/PhysicsObject.h"
+#include "GravityPaint/Constants.h"
 #include <fstream>
 #include <random>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 const LevelProgress LevelManager::s_emptyProgress;
 
@@ -17,7 +17,10 @@ LevelManager::~LevelManager() {
     shutdown();
 }
 
-bool LevelManager::initialize() {
+bool LevelManager::initialize(int screenWidth, int screenHeight) {
+    m_screenWidth = screenWidth;
+    m_screenHeight = screenHeight;
+    
     m_progress.resize(m_totalLevels);
     
     // Mark first level as unlocked
@@ -40,18 +43,18 @@ bool LevelManager::loadLevel(int levelId) {
         return false;
     }
 
-    m_currentLevel = std::make_unique<Level>();
     m_currentLevelId = levelId;
 
     // Create procedural level based on ID
     Level* level = createLevel(levelId, 1 + (levelId - 1) / 10);
     if (level) {
-        *m_currentLevel = *level;
-        delete level;
+        m_currentLevel.reset(level);
+    } else {
+        m_currentLevel = std::make_unique<Level>();
     }
 
     m_spawnedObjects.clear();
-    m_spawnedObjects.resize(m_currentLevel->getSpawnPoints().size(), false);
+    m_spawnedObjects.resize(m_currentLevel->getSpawnPoints().size(), 0);
     m_allSpawned = false;
     m_spawnTimer = 0;
 
@@ -67,7 +70,7 @@ bool LevelManager::loadLevelFromFile(const std::string& filepath) {
 
     m_currentLevelId = m_currentLevel->getId();
     m_spawnedObjects.clear();
-    m_spawnedObjects.resize(m_currentLevel->getSpawnPoints().size(), false);
+    m_spawnedObjects.resize(m_currentLevel->getSpawnPoints().size(), 0);
     m_allSpawned = false;
     m_spawnTimer = 0;
 
@@ -91,8 +94,8 @@ void LevelManager::startLevel() {
     m_levelTime = 0;
     m_spawnTimer = 0;
     
-    for (auto& spawned : m_spawnedObjects) {
-        spawned = false;
+    for (size_t i = 0; i < m_spawnedObjects.size(); ++i) {
+        m_spawnedObjects[i] = 0;
     }
     m_allSpawned = false;
 }
@@ -145,8 +148,8 @@ void LevelManager::resetLevel() {
     m_levelTime = 0;
     m_spawnTimer = 0;
     
-    for (auto& spawned : m_spawnedObjects) {
-        spawned = false;
+    for (size_t i = 0; i < m_spawnedObjects.size(); ++i) {
+        m_spawnedObjects[i] = false;
     }
     m_allSpawned = false;
 }
@@ -215,22 +218,39 @@ bool LevelManager::isLevelUnlocked(int levelId) const {
 }
 
 void LevelManager::spawnObjects(PhysicsWorld* physics) {
-    if (!m_currentLevel || !physics) return;
+    static std::ofstream logFile("GRAVITYPAINT_spawn.log", std::ios::app);
+    logFile << "spawnObjects called" << std::endl;
+    
+    if (!m_currentLevel) { logFile << "ERROR: m_currentLevel is null" << std::endl; return; }
+    if (!physics) { logFile << "ERROR: physics is null" << std::endl; return; }
 
     const auto& spawnPoints = m_currentLevel->getSpawnPoints();
+    logFile << "spawnPoints count: " << spawnPoints.size() << std::endl;
+    logFile << "m_spawnedObjects size: " << m_spawnedObjects.size() << std::endl;
+    logFile.flush();
     
     for (size_t i = 0; i < spawnPoints.size(); ++i) {
+        logFile << "Processing spawn " << i << std::endl;
+        logFile.flush();
+        
         const SpawnPoint& spawn = spawnPoints[i];
         
         if (spawn.delay <= 0 && !m_spawnedObjects[i]) {
+            logFile << "Creating object at " << spawn.position.x << "," << spawn.position.y << std::endl;
+            logFile.flush();
+            
             PhysicsObject* obj = physics->createObject(spawn.objectType, spawn.position, spawn.size);
             if (obj) {
                 obj->setEnergy(spawn.energy);
                 obj->setColor(spawn.color);
             }
-            m_spawnedObjects[i] = true;
+            m_spawnedObjects[i] = 1;
+            logFile << "Object created" << std::endl;
+            logFile.flush();
         }
     }
+    logFile << "spawnObjects done" << std::endl;
+    logFile.flush();
 }
 
 void LevelManager::updateSpawns(float deltaTime, PhysicsWorld* physics) {
@@ -252,7 +272,7 @@ void LevelManager::updateSpawns(float deltaTime, PhysicsWorld* physics) {
                 obj->setEnergy(spawn.energy);
                 obj->setColor(spawn.color);
             }
-            m_spawnedObjects[i] = true;
+            m_spawnedObjects[i] = 1;
         } else {
             allDone = false;
         }
@@ -384,17 +404,44 @@ Level* LevelManager::createLevel(int id, int difficulty) {
     std::mt19937 rng(id * 12345);
     std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
+    // Use actual screen dimensions
+    float screenW = static_cast<float>(m_screenWidth);
+    float screenH = static_cast<float>(m_screenHeight);
+    
+    // Apply game difficulty modifiers
+    float timeMod = 1.0f;
+    int strokeMod = 0;
+    float gravityMod = 1.0f;
+    
+    switch (m_gameDifficulty) {
+        case Difficulty::Easy:
+            timeMod = 1.5f;      // 50% more time
+            strokeMod = 3;       // 3 extra strokes
+            gravityMod = 0.7f;   // Slower falling
+            break;
+        case Difficulty::Medium:
+            timeMod = 1.0f;
+            strokeMod = 0;
+            gravityMod = 1.0f;
+            break;
+        case Difficulty::Hard:
+            timeMod = 0.7f;      // 30% less time
+            strokeMod = -2;      // 2 fewer strokes
+            gravityMod = 1.3f;   // Faster falling
+            break;
+    }
+
     level->setId(id);
     level->setName("Level " + std::to_string(id));
-    level->setDimensions(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
-    level->setTimeLimit(std::max(30.0f, 90.0f - difficulty * 3.0f));
+    level->setDimensions(screenW, screenH);
+    level->setTimeLimit(std::max(20.0f, (90.0f - difficulty * 3.0f) * timeMod));
     level->setDifficulty(difficulty);
-    level->setMaxStrokes(std::max(3, MAX_ACTIVE_STROKES - difficulty / 5));
+    level->setMaxStrokes(std::max(2, MAX_ACTIVE_STROKES - difficulty / 5 + strokeMod));
 
-    // Goal position varies
-    float goalY = DEFAULT_SCREEN_HEIGHT - 100 - (id % 3) * 100;
-    float goalX = DEFAULT_SCREEN_WIDTH / 4 + (id % 5) * DEFAULT_SCREEN_WIDTH / 10;
-    level->setGoalZone(Rect(goalX, goalY, 180, 100));
+    // Goal position at bottom of screen
+    float goalY = screenH - 150 - (id % 3) * 50;
+    float goalX = screenW / 4 + (id % 5) * screenW / 10;
+    level->setGoalZone(Rect(goalX, goalY, 150, 80));
 
     // Object count scales with level
     int objectCount = 1 + id / 5;
@@ -403,8 +450,8 @@ Level* LevelManager::createLevel(int id, int difficulty) {
     for (int i = 0; i < objectCount; ++i) {
         SpawnPoint spawn;
         spawn.position = Vec2(
-            100 + dist01(rng) * (DEFAULT_SCREEN_WIDTH - 200),
-            100 + dist01(rng) * 300
+            80 + dist01(rng) * (screenW - 160),
+            150 + dist01(rng) * 200
         );
         spawn.objectType = static_cast<ObjectType>(static_cast<int>(dist01(rng) * 5));
         spawn.delay = i * (1.0f + dist01(rng));
@@ -426,10 +473,10 @@ Level* LevelManager::createLevel(int id, int difficulty) {
     for (int i = 0; i < obstacleCount; ++i) {
         ObstacleData obstacle;
         obstacle.position = Vec2(
-            100 + dist01(rng) * (DEFAULT_SCREEN_WIDTH - 200),
-            DEFAULT_SCREEN_HEIGHT / 3 + dist01(rng) * DEFAULT_SCREEN_HEIGHT / 3
+            80 + dist01(rng) * (screenW - 160),
+            screenH / 3 + dist01(rng) * screenH / 3
         );
-        obstacle.size = Vec2(80 + dist01(rng) * 100, 15 + dist01(rng) * 20);
+        obstacle.size = Vec2(60 + dist01(rng) * 80, 12 + dist01(rng) * 15);
         obstacle.rotation = dist01(rng) * 0.5f - 0.25f;
         obstacle.isCircle = dist01(rng) > 0.7f;
         obstacle.color = Color(80, 80, 100);
@@ -452,4 +499,4 @@ void LevelManager::updateObjectiveProgress(PhysicsWorld* physics) {
     m_currentLevel->getObjective()->update(0, physics);
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

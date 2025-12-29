@@ -1,8 +1,8 @@
-#include "Vectoria/core/InputManager.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/core/InputManager.h"
+#include "GravityPaint/Constants.h"
 #include <cstring>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 InputManager::InputManager() {
     m_keyboardState = SDL_GetKeyboardState(nullptr);
@@ -45,14 +45,14 @@ void InputManager::processEvent(const SDL_Event& event) {
 }
 
 void InputManager::update(float /*deltaTime*/) {
-    // Update previous mouse button states
-    m_prevMouseButtons = m_mouseButtonsDown;
-    
-    // Calculate pressed/released states
+    // Calculate pressed/released states BEFORE updating previous state
     for (int i = 0; i < 5; ++i) {
         m_mouseButtonsPressed[i] = m_mouseButtonsDown[i] && !m_prevMouseButtons[i];
         m_mouseButtonsReleased[i] = !m_mouseButtonsDown[i] && m_prevMouseButtons[i];
     }
+    
+    // Update previous mouse button states AFTER calculating
+    m_prevMouseButtons = m_mouseButtonsDown;
 
     // Update previous keyboard state
     std::memcpy(m_prevKeyboardState.data(), m_keyboardState, SDL_NUM_SCANCODES);
@@ -336,4 +336,4 @@ void InputManager::detectPinch() {
     }
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

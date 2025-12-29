@@ -1,9 +1,9 @@
-#include "Vectoria/core/ResourceManager.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/core/ResourceManager.h"
+#include "GravityPaint/Constants.h"
 #include <fstream>
 #include <sstream>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 std::string ResourceManager::s_emptyString;
 
@@ -222,4 +222,4 @@ size_t ResourceManager::getMemoryUsage() const {
     return total;
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

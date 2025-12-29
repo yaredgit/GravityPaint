@@ -1,7 +1,7 @@
-#include "Vectoria/physics/GravityField.h"
+#include "GravityPaint/physics/GravityField.h"
 #include <cmath>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 GravityField::GravityField(const Vec2& position, const Vec2& direction, float strength, float radius)
     : m_position(position)
@@ -160,4 +160,4 @@ Rect GravityZone::getBounds() const {
     return Rect(pos.x - m_width / 2, pos.y - m_height / 2, m_width, m_height);
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

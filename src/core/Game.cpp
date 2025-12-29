@@ -1,17 +1,18 @@
-#include "Vectoria/core/Game.h"
-#include "Vectoria/core/GameState.h"
-#include "Vectoria/core/InputManager.h"
-#include "Vectoria/core/ResourceManager.h"
-#include "Vectoria/physics/PhysicsWorld.h"
-#include "Vectoria/graphics/Renderer.h"
-#include "Vectoria/audio/AudioManager.h"
-#include "Vectoria/level/LevelManager.h"
-#include "Vectoria/ui/HUD.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/core/Game.h"
+#include "GravityPaint/core/GameState.h"
+#include "GravityPaint/core/InputManager.h"
+#include "GravityPaint/core/ResourceManager.h"
+#include "GravityPaint/physics/PhysicsWorld.h"
+#include "GravityPaint/graphics/Renderer.h"
+#include "GravityPaint/audio/AudioManager.h"
+#include "GravityPaint/level/LevelManager.h"
+#include "GravityPaint/ui/HUD.h"
+#include "GravityPaint/Constants.h"
 
 #include <SDL.h>
+#include <fstream>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 Game& Game::getInstance() {
     static Game instance;
@@ -30,7 +31,7 @@ bool Game::initialize(int screenWidth, int screenHeight) {
 
     // Create window
     uint32_t windowFlags = SDL_WINDOW_SHOWN;
-#if defined(VECTORIA_ANDROID) || defined(VECTORIA_IOS)
+#if defined(GRAVITYPAINT_ANDROID) || defined(GRAVITYPAINT_IOS)
     windowFlags |= SDL_WINDOW_FULLSCREEN;
 #else
     windowFlags |= SDL_WINDOW_RESIZABLE;
@@ -77,12 +78,19 @@ bool Game::initialize(int screenWidth, int screenHeight) {
     }
 
     m_levelManager = std::make_unique<LevelManager>();
-    if (!m_levelManager->initialize()) {
+    if (!m_levelManager->initialize(m_screenWidth, m_screenHeight)) {
         SDL_Log("Level manager initialization failed");
         return false;
     }
 
     m_hud = std::make_unique<HUD>(m_screenWidth, m_screenHeight);
+    
+    // Set up click sound callback
+    m_hud->setClickSoundCallback([this]() {
+        if (m_soundEnabled) {
+            m_audioManager->playSound(SoundEffect::ButtonClick);
+        }
+    });
 
     // Start with menu state
     changeState(GameStateType::Menu);
@@ -98,9 +106,8 @@ void Game::run() {
         calculateDeltaTime();
         processEvents();
         
-        if (!m_paused) {
-            update(m_deltaTime);
-        }
+        // Always call update - it handles input for all states including paused
+        update(m_deltaTime);
         
         render();
 
@@ -181,17 +188,33 @@ void Game::update(float deltaTime) {
     }
 
     if (m_currentState) {
-        // Handle input
-        for (int i = 0; i < m_inputManager->getActiveTouchCount(); ++i) {
-            m_currentState->handleInput(m_inputManager->getTouchPoint(i));
+        bool pressed = m_inputManager->isMouseButtonPressed(SDL_BUTTON_LEFT);
+        bool down = m_inputManager->isMouseButtonDown(SDL_BUTTON_LEFT);
+        bool released = m_inputManager->isMouseButtonReleased(SDL_BUTTON_LEFT);
+        
+        // Process on press
+        if (pressed) {
+            TouchPoint pressTouch;
+            pressTouch.position = m_inputManager->getMousePosition();
+            pressTouch.isActive = true;
+            pressTouch.id = 0;
+            m_currentState->handleInput(pressTouch);
         }
-
-        // Also handle mouse as touch on desktop
-        if (m_inputManager->isMouseButtonDown(SDL_BUTTON_LEFT)) {
-            TouchPoint mouseTouch;
-            mouseTouch.position = m_inputManager->getMousePosition();
-            mouseTouch.isActive = true;
-            m_currentState->handleInput(mouseTouch);
+        // Process continuous drag for drawing strokes
+        else if (down) {
+            TouchPoint dragTouch;
+            dragTouch.position = m_inputManager->getMousePosition();
+            dragTouch.isActive = true;
+            dragTouch.id = 0;
+            m_currentState->handleInput(dragTouch);
+        }
+        // Process on release
+        else if (released) {
+            TouchPoint releaseTouch;
+            releaseTouch.position = m_inputManager->getMousePosition();
+            releaseTouch.isActive = false;
+            releaseTouch.id = 0;
+            m_currentState->handleInput(releaseTouch);
         }
 
         m_currentState->update(deltaTime);
@@ -235,6 +258,15 @@ void Game::changeState(GameStateType newState) {
         case GameStateType::Menu:
             m_currentState = std::make_unique<MenuState>(this);
             break;
+        case GameStateType::DifficultySelect:
+            m_currentState = std::make_unique<DifficultySelectState>(this);
+            break;
+        case GameStateType::LevelSelect:
+            m_currentState = std::make_unique<LevelSelectState>(this);
+            break;
+        case GameStateType::Settings:
+            m_currentState = std::make_unique<SettingsState>(this);
+            break;
         case GameStateType::Playing:
             m_currentState = std::make_unique<PlayingState>(this);
             break;
@@ -272,19 +304,25 @@ void Game::resumeGame() {
 }
 
 void Game::restartLevel() {
-    m_levelManager->resetLevel();
-    m_physicsWorld->reset();
-    resetScore();
-    changeState(GameStateType::Playing);
+    // Restarting costs a life
+    loseLife();
+    
+    // If still alive, restart the level
+    if (m_lives > 0) {
+        m_levelManager->reloadCurrentLevel();
+        resetScore();
+        changeState(GameStateType::Playing);
+    }
+    // Otherwise loseLife() already changed to GameOver
 }
 
 void Game::nextLevel() {
     if (m_levelManager->hasNextLevel()) {
         m_levelManager->nextLevel();
-        m_physicsWorld->reset();
         resetScore();
         changeState(GameStateType::Playing);
     } else {
+        // All levels complete
         changeState(GameStateType::Menu);
     }
 }
@@ -321,4 +359,52 @@ void Game::resetCombo() {
     m_hud->setCombo(0);
 }
 
-} // namespace Vectoria
+void Game::loseLife() {
+    m_lives--;
+    if (m_lives <= 0) {
+        m_lives = 0;
+        changeState(GameStateType::GameOver);
+    }
+}
+
+void Game::resetLives() {
+    m_lives = m_maxLives;
+}
+
+void Game::addLife() {
+    if (m_lives < m_maxLives) {
+        m_lives++;
+    }
+}
+
+void Game::saveProgress() {
+    std::ofstream file("gravitypaint_save.dat", std::ios::binary);
+    if (!file.is_open()) return;
+    
+    // Save settings
+    file.write(reinterpret_cast<const char*>(&m_difficulty), sizeof(m_difficulty));
+    file.write(reinterpret_cast<const char*>(&m_gameMode), sizeof(m_gameMode));
+    file.write(reinterpret_cast<const char*>(&m_soundEnabled), sizeof(m_soundEnabled));
+    file.write(reinterpret_cast<const char*>(&m_musicEnabled), sizeof(m_musicEnabled));
+    file.write(reinterpret_cast<const char*>(&m_highScore), sizeof(m_highScore));
+    
+    // Save level progress
+    m_levelManager->saveProgress("gravitypaint_levels.dat");
+}
+
+void Game::loadProgress() {
+    std::ifstream file("gravitypaint_save.dat", std::ios::binary);
+    if (!file.is_open()) return;
+    
+    // Load settings
+    file.read(reinterpret_cast<char*>(&m_difficulty), sizeof(m_difficulty));
+    file.read(reinterpret_cast<char*>(&m_gameMode), sizeof(m_gameMode));
+    file.read(reinterpret_cast<char*>(&m_soundEnabled), sizeof(m_soundEnabled));
+    file.read(reinterpret_cast<char*>(&m_musicEnabled), sizeof(m_musicEnabled));
+    file.read(reinterpret_cast<char*>(&m_highScore), sizeof(m_highScore));
+    
+    // Load level progress
+    m_levelManager->loadProgress("gravitypaint_levels.dat");
+}
+
+} // namespace GravityPaint

@@ -1,10 +1,10 @@
-#include "Vectoria/level/Objective.h"
-#include "Vectoria/physics/PhysicsWorld.h"
-#include "Vectoria/physics/PhysicsObject.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/level/Objective.h"
+#include "GravityPaint/physics/PhysicsWorld.h"
+#include "GravityPaint/physics/PhysicsObject.h"
+#include "GravityPaint/Constants.h"
 #include <sstream>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 Objective::Objective(ObjectiveType type)
     : m_type(type)
@@ -230,4 +230,4 @@ std::string MaximizeEnergyObjective::getDescription() const {
     return ss.str();
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

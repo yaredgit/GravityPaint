@@ -1,8 +1,8 @@
-#include "Vectoria/physics/DeformableSurface.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/physics/DeformableSurface.h"
+#include "GravityPaint/Constants.h"
 #include <cmath>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 DeformableSurface::DeformableSurface(const Vec2& position, float width, float height, int resolutionX, int resolutionY)
     : m_position(position)
@@ -270,4 +270,4 @@ Vec2 DeformableSurface::getNearestPoint(const Vec2& point) const {
     return nearest;
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint

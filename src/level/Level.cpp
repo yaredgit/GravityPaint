@@ -1,9 +1,10 @@
-#include "Vectoria/level/Level.h"
-#include "Vectoria/Constants.h"
+#include "GravityPaint/level/Level.h"
+#include "GravityPaint/Constants.h"
 #include <fstream>
 #include <sstream>
+#include <SDL.h>
 
-namespace Vectoria {
+namespace GravityPaint {
 
 Level::Level()
     : m_width(DEFAULT_SCREEN_WIDTH)
@@ -108,4 +109,4 @@ bool Level::parseJSON(const std::string& /*json*/) {
     return false;
 }
 
-} // namespace Vectoria
+} // namespace GravityPaint
