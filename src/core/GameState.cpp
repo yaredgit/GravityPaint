@@ -404,7 +404,20 @@ void PlayingState::checkLevelCompletion() {
         m_game->getLevelManager()->completeLevel(m_game->getScore(), m_levelTime);
         m_game->changeState(GameStateType::LevelComplete);
     } else if (level->getObjective()->isFailed()) {
-        m_game->changeState(GameStateType::GameOver);
+        // Lose a life but continue if lives remain
+        m_game->loseLife();
+        if (m_game->getLives() > 0) {
+            // Reset level and continue playing
+            m_game->getHUD()->showMessage("Try Again!", 1.5f);
+            m_game->getLevelManager()->reloadCurrentLevel();
+            m_game->getPhysicsWorld()->reset();
+            m_game->getLevelManager()->startLevel();
+            m_game->getLevelManager()->spawnObjects(m_game->getPhysicsWorld());
+            m_game->getHUD()->setLives(m_game->getLives(), m_game->getMaxLives());
+            m_levelTime = 0.0f;
+            m_gravityStrokes.clear();
+        }
+        // If lives == 0, loseLife() already changed state to GameOver
     }
 }
 

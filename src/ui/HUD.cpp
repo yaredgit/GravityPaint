@@ -288,9 +288,10 @@ void HUD::renderLevelInfo(Renderer* renderer) {
 }
 
 void HUD::renderLives(Renderer* renderer) {
-    // Draw hearts/lives in top right area
-    float startX = m_screenWidth - HUD_PADDING - (m_maxLives * 30);
-    float y = HUD_PADDING + 5;
+    // Draw hearts/lives in top right area (left of pause button)
+    float pauseButtonWidth = 60.0f; // Space for pause button
+    float startX = m_screenWidth - HUD_PADDING - pauseButtonWidth - (m_maxLives * 35);
+    float y = HUD_PADDING + 15;
     
     for (int i = 0; i < m_maxLives; ++i) {
         float x = startX + i * 30;

@@ -314,16 +314,10 @@ void Game::resumeGame() {
 }
 
 void Game::restartLevel() {
-    // Restarting costs a life
-    loseLife();
-    
-    // If still alive, restart the level
-    if (m_lives > 0) {
-        m_levelManager->reloadCurrentLevel();
-        resetScore();
-        changeState(GameStateType::Playing);
-    }
-    // Otherwise loseLife() already changed to GameOver
+    // Manual restart is free - just reload the level
+    m_levelManager->reloadCurrentLevel();
+    resetScore();
+    changeState(GameStateType::Playing);
 }
 
 void Game::nextLevel() {
