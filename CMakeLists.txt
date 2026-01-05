@@ -106,6 +106,9 @@ if(PLATFORM_WEB)
         LINK_FLAGS "${EMSCRIPTEN_FLAGS_STR} -s MIN_WEBGL_VERSION=2 -s MAX_WEBGL_VERSION=2 --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html"
     )
     
+    # Disable Box2D extras that don't work with Emscripten
+    set(BOX2D_BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+    set(BOX2D_BUILD_TESTBED OFF CACHE BOOL "" FORCE)
     add_subdirectory(extern/box2d)
     target_link_libraries(${PROJECT_NAME} PRIVATE box2d)
 
