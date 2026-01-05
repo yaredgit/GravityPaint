@@ -35,6 +35,16 @@ bool Renderer::initialize(SDL_Window* window, int width, int height) {
     // Try to load a font - check multiple paths
     const char* fontPaths[] = {
         "assets/fonts/default.ttf",
+        "/assets/fonts/default.ttf",
+        // Linux paths (for GitHub Actions and Emscripten build)
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        // macOS paths
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/Library/Fonts/Arial.ttf",
+        // Windows paths
         "C:/Windows/Fonts/arial.ttf",
         "C:/Windows/Fonts/segoeui.ttf",
         "C:/Windows/Fonts/calibri.ttf",

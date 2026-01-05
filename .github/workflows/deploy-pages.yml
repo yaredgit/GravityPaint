@@ -31,6 +31,15 @@ jobs:
       - name: Verify Emscripten
         run: emcc --version
 
+      - name: Download font for web build
+        run: |
+          mkdir -p assets/fonts
+          # Copy system font for bundling with Emscripten
+          cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf assets/fonts/default.ttf || \
+          cp /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf assets/fonts/default.ttf || \
+          cp /usr/share/fonts/truetype/freefont/FreeSans.ttf assets/fonts/default.ttf || true
+          ls -la assets/fonts/
+
       - name: Create build directory
         run: mkdir -p build-web
 
