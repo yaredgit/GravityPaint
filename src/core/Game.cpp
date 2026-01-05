@@ -24,7 +24,11 @@ bool Game::initialize(int screenWidth, int screenHeight) {
     m_screenHeight = screenHeight;
 
     // Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_SENSOR) < 0) {
+    uint32_t sdlFlags = SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS;
+#ifndef __EMSCRIPTEN__
+    sdlFlags |= SDL_INIT_SENSOR;
+#endif
+    if (SDL_Init(sdlFlags) < 0) {
         SDL_Log("SDL init failed: %s", SDL_GetError());
         return false;
     }
@@ -103,21 +107,27 @@ bool Game::initialize(int screenWidth, int screenHeight) {
 
 void Game::run() {
     while (m_running) {
-        calculateDeltaTime();
-        processEvents();
-        
-        // Always call update - it handles input for all states including paused
-        update(m_deltaTime);
-        
-        render();
-
-        // Frame rate limiting
-        uint64_t frameEnd = SDL_GetPerformanceCounter();
-        float frameTime = static_cast<float>(frameEnd - m_lastFrameTime) / SDL_GetPerformanceFrequency();
-        if (frameTime < TARGET_FRAME_TIME) {
-            SDL_Delay(static_cast<uint32_t>((TARGET_FRAME_TIME - frameTime) * 1000));
-        }
+        runOneFrame();
     }
+}
+
+void Game::runOneFrame() {
+    calculateDeltaTime();
+    processEvents();
+    
+    // Always call update - it handles input for all states including paused
+    update(m_deltaTime);
+    
+    render();
+
+#ifndef __EMSCRIPTEN__
+    // Frame rate limiting (not needed for Emscripten - browser handles it)
+    uint64_t frameEnd = SDL_GetPerformanceCounter();
+    float frameTime = static_cast<float>(frameEnd - m_lastFrameTime) / SDL_GetPerformanceFrequency();
+    if (frameTime < TARGET_FRAME_TIME) {
+        SDL_Delay(static_cast<uint32_t>((TARGET_FRAME_TIME - frameTime) * 1000));
+    }
+#endif
 }
 
 void Game::shutdown() {

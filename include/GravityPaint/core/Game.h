@@ -22,6 +22,7 @@ public:
 
     bool initialize(int screenWidth = DEFAULT_SCREEN_WIDTH, int screenHeight = DEFAULT_SCREEN_HEIGHT);
     void run();
+    void runOneFrame();
     void shutdown();
 
     void changeState(GameStateType newState);

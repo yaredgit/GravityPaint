@@ -2,6 +2,10 @@
 #include <SDL.h>
 #include <iostream>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #ifdef GRAVITYPAINT_ANDROID
 #include <android/log.h>
 #define LOG_TAG "Vectoria"
@@ -10,6 +14,15 @@
 #else
 #define LOGI(...) printf(__VA_ARGS__); printf("\n")
 #define LOGE(...) fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n")
+#endif
+
+#ifdef __EMSCRIPTEN__
+void emscripten_main_loop() {
+    auto& game = GravityPaint::Game::getInstance();
+    if (game.isRunning()) {
+        game.runOneFrame();
+    }
+}
 #endif
 
 int main(int argc, char* argv[]) {
@@ -45,8 +58,12 @@ int main(int argc, char* argv[]) {
     LOGI("Game initialized successfully");
     LOGI("Screen: %dx%d", screenWidth, screenHeight);
 
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(emscripten_main_loop, 0, 1);
+#else
     game.run();
     game.shutdown();
+#endif
 
     LOGI("Vectoria shutdown complete");
     return 0;
