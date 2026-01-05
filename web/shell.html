@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>GravityPaint - Draw Gravity, Solve Puzzles</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0a14;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #canvas {
+            border: 2px solid #1a3a5c;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 200, 255, 0.2);
+            touch-action: none;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #00d4ff;
+            z-index: 100;
+        }
+
+        #loading h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+            letter-spacing: 8px;
+        }
+
+        #loading p {
+            font-size: 18px;
+            color: #8899aa;
+            margin-bottom: 30px;
+        }
+
+        #progress-container {
+            width: 300px;
+            height: 8px;
+            background: #1a2a3a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #667788;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            margin: 20px auto;
+            border: 3px solid #1a3a5c;
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #fullscreen-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #1a3a5c, #0a2a4c);
+            border: 1px solid #00d4ff;
+            border-radius: 25px;
+            color: #00d4ff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        #fullscreen-btn:hover {
+            background: linear-gradient(135deg, #2a4a6c, #1a3a5c);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: #556677;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            #loading h1 {
+                font-size: 32px;
+                letter-spacing: 4px;
+            }
+
+            #fullscreen-btn {
+                bottom: 10px;
+                right: 10px;
+                padding: 10px 20px;
+                font-size: 12px;
+            }
+
+            #instructions {
+                display: none;
+            }
+        }
+
+        /* Error state */
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ff6666;
+            display: none;
+        }
+
+        #error h2 {
+            margin-bottom: 15px;
+        }
+
+        #error button {
+            padding: 10px 30px;
+            background: #ff6666;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading">
+            <h1>GRAVITYPAINT</h1>
+            <p>Draw Gravity, Solve Puzzles</p>
+            <div class="spinner"></div>
+            <div id="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <div id="status">Initializing...</div>
+        </div>
+
+        <div id="error">
+            <h2>Failed to Load Game</h2>
+            <p id="error-message">An error occurred while loading the game.</p>
+            <button onclick="location.reload()">Retry</button>
+        </div>
+
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
+
+    <button id="fullscreen-btn" class="hidden">Fullscreen</button>
+    
+    <div id="instructions" class="hidden">
+        Swipe to create gravity fields | Guide objects to the goal
+    </div>
+
+    <script type="text/javascript">
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: function(text) {
+                console.log(text);
+            },
+            printErr: function(text) {
+                console.error(text);
+            },
+            canvas: (function() {
+                var canvas = document.getElementById('canvas');
+                canvas.addEventListener('webglcontextlost', function(e) {
+                    alert('WebGL context lost. Please reload the page.');
+                    e.preventDefault();
+                }, false);
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                var statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.innerHTML = text;
+                }
+                
+                // Parse progress if available
+                var match = text.match(/(\d+)\/(\d+)/);
+                if (match) {
+                    var progress = (parseInt(match[1]) / parseInt(match[2])) * 100;
+                    document.getElementById('progress-bar').style.width = progress + '%';
+                }
+
+                // Hide loading screen when done
+                if (text === '' || text.includes('Running')) {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('fullscreen-btn').classList.remove('hidden');
+                    document.getElementById('instructions').classList.remove('hidden');
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                Module.setStatus(left ? 'Loading... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : 'Starting game...');
+            },
+            onRuntimeInitialized: function() {
+                console.log('GravityPaint WebAssembly runtime initialized');
+            }
+        };
+
+        // Error handling
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error-message').textContent = message;
+            return true;
+        };
+
+        // Fullscreen functionality
+        document.getElementById('fullscreen-btn').addEventListener('click', function() {
+            var elem = document.getElementById('game-container');
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        });
+
+        // Prevent default touch behaviors for better mobile experience
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.id === 'canvas') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Handle orientation changes
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                if (Module._handleResize) {
+                    Module._handleResize(window.innerWidth, window.innerHeight);
+                }
+            }, 100);
+        });
+
+        // Resize canvas to fit screen
+        function resizeCanvas() {
+            var canvas = document.getElementById('canvas');
+            var container = document.getElementById('game-container');
+            var aspectRatio = 9 / 16; // Portrait mobile aspect ratio
+
+            var maxWidth = container.clientWidth;
+            var maxHeight = container.clientHeight;
+
+            var width, height;
+            if (maxWidth / maxHeight > aspectRatio) {
+                height = maxHeight;
+                width = height * aspectRatio;
+            } else {
+                width = maxWidth;
+                height = width / aspectRatio;
+            }
+
+            canvas.style.width = Math.floor(width) + 'px';
+            canvas.style.height = Math.floor(height) + 'px';
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>

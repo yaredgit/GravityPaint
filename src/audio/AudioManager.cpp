@@ -31,6 +31,7 @@ bool AudioManager::initialize() {
     setMusicVolume(m_musicVolume);
     setSFXVolume(m_sfxVolume);
 
+    SDL_Log("AudioManager initialized with %zu sounds", m_sounds.size());
     return true;
 }
 

@@ -32,8 +32,28 @@ bool Renderer::initialize(SDL_Window* window, int width, int height) {
         SDL_Log("TTF_Init failed: %s", TTF_GetError());
     }
 
-    // Try to load a font
-    m_fontPath = "assets/fonts/default.ttf";
+    // Try to load a font - check multiple paths
+    const char* fontPaths[] = {
+        "assets/fonts/default.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/calibri.ttf",
+        nullptr
+    };
+    
+    for (int i = 0; fontPaths[i] != nullptr; ++i) {
+        TTF_Font* testFont = TTF_OpenFont(fontPaths[i], 24);
+        if (testFont) {
+            TTF_CloseFont(testFont);
+            m_fontPath = fontPaths[i];
+            SDL_Log("Using font: %s", m_fontPath.c_str());
+            break;
+        }
+    }
+    
+    if (m_fontPath.empty()) {
+        SDL_Log("Warning: No fonts found, text will be rendered as boxes");
+    }
 
     return true;
 }
