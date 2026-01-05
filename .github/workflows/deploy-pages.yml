@@ -31,14 +31,15 @@ jobs:
       - name: Verify Emscripten
         run: emcc --version
 
-      - name: Download font for web build
+      - name: Install and bundle font for web build
         run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-dejavu-core
           mkdir -p assets/fonts
-          # Copy system font for bundling with Emscripten
-          cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf assets/fonts/default.ttf || \
-          cp /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf assets/fonts/default.ttf || \
-          cp /usr/share/fonts/truetype/freefont/FreeSans.ttf assets/fonts/default.ttf || true
+          cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf assets/fonts/default.ttf
+          echo "Font file size:"
           ls -la assets/fonts/
+          file assets/fonts/default.ttf
 
       - name: Create build directory
         run: mkdir -p build-web

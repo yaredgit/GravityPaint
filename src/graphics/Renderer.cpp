@@ -34,8 +34,11 @@ bool Renderer::initialize(SDL_Window* window, int width, int height) {
 
     // Try to load a font - check multiple paths
     const char* fontPaths[] = {
-        "assets/fonts/default.ttf",
+#ifdef __EMSCRIPTEN__
+        // Emscripten virtual filesystem paths (preloaded assets)
         "/assets/fonts/default.ttf",
+        "assets/fonts/default.ttf",
+#endif
         // Linux paths (for GitHub Actions and Emscripten build)
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -52,12 +55,15 @@ bool Renderer::initialize(SDL_Window* window, int width, int height) {
     };
     
     for (int i = 0; fontPaths[i] != nullptr; ++i) {
+        SDL_Log("Trying font: %s", fontPaths[i]);
         TTF_Font* testFont = TTF_OpenFont(fontPaths[i], 24);
         if (testFont) {
             TTF_CloseFont(testFont);
             m_fontPath = fontPaths[i];
-            SDL_Log("Using font: %s", m_fontPath.c_str());
+            SDL_Log("SUCCESS: Using font: %s", m_fontPath.c_str());
             break;
+        } else {
+            SDL_Log("Failed: %s - %s", fontPaths[i], TTF_GetError());
         }
     }
     
