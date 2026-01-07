@@ -29,13 +29,18 @@ int main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
 
-    LOGI("Starting Vectoria...");
+    LOGI("Starting GravityPaint...");
 
     // Get screen size for mobile or use defaults
     int screenWidth = GravityPaint::DEFAULT_SCREEN_WIDTH;
     int screenHeight = GravityPaint::DEFAULT_SCREEN_HEIGHT;
 
-#if defined(GRAVITYPAINT_ANDROID) || defined(GRAVITYPAINT_IOS)
+#ifdef __EMSCRIPTEN__
+    // On web, use canvas size (set by JavaScript)
+    screenWidth = 540;
+    screenHeight = 960;
+    LOGI("Web build - using canvas dimensions");
+#elif defined(GRAVITYPAINT_ANDROID) || defined(GRAVITYPAINT_IOS)
     // On mobile, get actual screen size
     SDL_DisplayMode displayMode;
     if (SDL_GetCurrentDisplayMode(0, &displayMode) == 0) {

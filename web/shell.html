@@ -35,8 +35,16 @@
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(0, 200, 255, 0.2);
             touch-action: none;
-            max-width: 100%;
-            max-height: 100%;
+            display: block;
+        }
+
+        /* Fullscreen mode - fill entire screen */
+        #game-container:fullscreen #canvas,
+        #game-container:-webkit-full-screen #canvas {
+            width: 100vw !important;
+            height: 100vh !important;
+            border: none;
+            border-radius: 0;
         }
 
         #loading {
@@ -293,25 +301,45 @@
         function resizeCanvas() {
             var canvas = document.getElementById('canvas');
             var container = document.getElementById('game-container');
-            var aspectRatio = 9 / 16; // Portrait mobile aspect ratio
-
+            var isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+            
             var maxWidth = container.clientWidth;
             var maxHeight = container.clientHeight;
 
             var width, height;
-            if (maxWidth / maxHeight > aspectRatio) {
-                height = maxHeight;
-                width = height * aspectRatio;
+            
+            if (isFullscreen) {
+                // In fullscreen, use full screen dimensions
+                width = window.innerWidth;
+                height = window.innerHeight;
             } else {
-                width = maxWidth;
-                height = width / aspectRatio;
+                // Normal mode - fit within container with flexible aspect ratio
+                var aspectRatio = 9 / 16; // Portrait mobile aspect ratio
+                var containerAspect = maxWidth / maxHeight;
+                
+                if (containerAspect > aspectRatio) {
+                    // Container is wider than target - limit by height
+                    height = Math.min(maxHeight, 960);
+                    width = height * aspectRatio;
+                } else {
+                    // Container is taller than target - limit by width  
+                    width = Math.min(maxWidth, 540);
+                    height = width / aspectRatio;
+                }
             }
 
+            // Apply CSS dimensions
             canvas.style.width = Math.floor(width) + 'px';
             canvas.style.height = Math.floor(height) + 'px';
+            
+            // Also set canvas buffer size for proper rendering
+            canvas.width = Math.floor(width);
+            canvas.height = Math.floor(height);
         }
 
         window.addEventListener('resize', resizeCanvas);
+        document.addEventListener('fullscreenchange', resizeCanvas);
+        document.addEventListener('webkitfullscreenchange', resizeCanvas);
         resizeCanvas();
     </script>
     {{{ SCRIPT }}}
