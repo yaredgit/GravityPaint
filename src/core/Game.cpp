@@ -6,11 +6,13 @@
 #include "GravityPaint/graphics/Renderer.h"
 #include "GravityPaint/audio/AudioManager.h"
 #include "GravityPaint/level/LevelManager.h"
+#include "GravityPaint/level/Level.h"
 #include "GravityPaint/ui/HUD.h"
 #include "GravityPaint/Constants.h"
 
 #include <SDL.h>
 #include <fstream>
+#include <algorithm>
 
 namespace GravityPaint {
 
@@ -167,6 +169,21 @@ void Game::processEvents() {
                     m_screenHeight = event.window.data2;
                     if (m_hud) {
                         m_hud->setScreenSize(m_screenWidth, m_screenHeight);
+                    }
+                    if (m_levelManager) {
+                        m_levelManager->setScreenSize(m_screenWidth, m_screenHeight);
+                    }
+                    if (m_currentStateType == GameStateType::Playing && m_physicsWorld && m_levelManager) {
+                        m_physicsWorld->createBoundaries(static_cast<float>(m_screenWidth), static_cast<float>(m_screenHeight));
+                        if (auto* level = m_levelManager->getCurrentLevel()) {
+                            Rect goal = level->getGoalZone();
+                            const float margin = 24.0f;
+                            const float topInset = 120.0f;
+                            goal.x = std::clamp(goal.x, margin, std::max(margin, static_cast<float>(m_screenWidth) - goal.w - margin));
+                            goal.y = std::clamp(goal.y, topInset, std::max(topInset, static_cast<float>(m_screenHeight) - goal.h - margin));
+                            level->setGoalZone(goal);
+                            m_physicsWorld->createGoalZone(goal.center(), Vec2(goal.w, goal.h));
+                        }
                     }
                 }
                 break;

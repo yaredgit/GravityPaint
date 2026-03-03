@@ -36,6 +36,7 @@ public:
     
     // Audio callback for button clicks
     void setClickSoundCallback(std::function<void()> callback) { m_clickSoundCallback = callback; }
+    void setPauseButtonCallback(std::function<void()> callback);
 
     // Score display
     void setScore(int score);
@@ -59,7 +60,7 @@ public:
     void setStars(int stars, int maxStars = 3);
     
     // Lives
-    void setLives(int lives, int maxLives = 3);
+    void setLives(int lives, int maxLives = 5);
 
     // Messages
     void showMessage(const std::string& message, float duration = 2.0f);
@@ -120,8 +121,8 @@ private:
     int m_maxStars = 3;
     
     // Lives
-    int m_lives = 3;
-    int m_maxLives = 3;
+    int m_lives = 5;
+    int m_maxLives = 5;
 
     // Message
     std::string m_message;

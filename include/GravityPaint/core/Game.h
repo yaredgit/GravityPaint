@@ -62,6 +62,7 @@ public:
     void loseLife();
     void resetLives();
     void addLife();
+    void setPaused(bool paused) { m_paused = paused; }
 
     // Difficulty and game mode
     void setDifficulty(Difficulty diff) { m_difficulty = diff; }
@@ -117,8 +118,8 @@ private:
     int m_combo = 0;
     float m_comboTimer = 0.0f;
     
-    int m_lives = 3;
-    int m_maxLives = 3;
+    int m_lives = 5;
+    int m_maxLives = 5;
     
     Difficulty m_difficulty = Difficulty::Medium;
     GameMode m_gameMode = GameMode::Campaign;

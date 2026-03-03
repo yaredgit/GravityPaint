@@ -52,6 +52,7 @@ public:
 private:
     void updateGravityStrokes(float deltaTime);
     void checkLevelCompletion();
+    bool hasOutOfBoundsObject() const;
     void updateParticles(float deltaTime);
     void spawnGoalParticles(const Vec2& position, const Color& color);
     void spawnCollisionParticles(const Vec2& position, const Color& color);

@@ -4,6 +4,7 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 #endif
 
 #ifdef GRAVITYPAINT_ANDROID
@@ -36,10 +37,18 @@ int main(int argc, char* argv[]) {
     int screenHeight = GravityPaint::DEFAULT_SCREEN_HEIGHT;
 
 #ifdef __EMSCRIPTEN__
-    // On web, use canvas size (set by JavaScript)
-    screenWidth = 540;
-    screenHeight = 960;
-    LOGI("Web build - using canvas dimensions");
+    // On web, initialize from real canvas size to avoid viewport/input mismatch on mobile.
+    int canvasW = 0;
+    int canvasH = 0;
+    if (emscripten_get_canvas_element_size("#canvas", &canvasW, &canvasH) == EMSCRIPTEN_RESULT_SUCCESS &&
+        canvasW > 0 && canvasH > 0) {
+        screenWidth = canvasW;
+        screenHeight = canvasH;
+    } else {
+        screenWidth = 540;
+        screenHeight = 960;
+    }
+    LOGI("Web build - canvas size: %dx%d", screenWidth, screenHeight);
 #elif defined(GRAVITYPAINT_ANDROID) || defined(GRAVITYPAINT_IOS)
     // On mobile, get actual screen size
     SDL_DisplayMode displayMode;

@@ -33,6 +33,11 @@ bool LevelManager::initialize(int screenWidth, int screenHeight) {
     return true;
 }
 
+void LevelManager::setScreenSize(int screenWidth, int screenHeight) {
+    m_screenWidth = screenWidth;
+    m_screenHeight = screenHeight;
+}
+
 void LevelManager::shutdown() {
     m_currentLevel.reset();
     m_progress.clear();

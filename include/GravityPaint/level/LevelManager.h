@@ -27,6 +27,7 @@ public:
 
     bool initialize(int screenWidth, int screenHeight);
     void shutdown();
+    void setScreenSize(int screenWidth, int screenHeight);
     
     // Difficulty setting
     void setGameDifficulty(Difficulty diff) { m_gameDifficulty = diff; }

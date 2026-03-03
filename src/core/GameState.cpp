@@ -193,6 +193,7 @@ void PlayingState::enter() {
     hud->setLives(m_game->getLives(), m_game->getMaxLives());
 
     hud->setPauseButtonVisible(true);
+    hud->setPauseButtonCallback([game = m_game]() { game->pauseGame(); });
     hud->setVisible(true);
     
     Game* game = m_game;
@@ -209,6 +210,7 @@ void PlayingState::enter() {
 void PlayingState::exit() {
     m_game->getHUD()->clearButtons();
     m_game->getHUD()->setPauseButtonVisible(false);
+    m_game->getHUD()->setPauseButtonCallback(nullptr);
 }
 
 void PlayingState::update(float deltaTime) {
@@ -402,6 +404,21 @@ void PlayingState::checkLevelCompletion() {
     
     if (!level || !level->getObjective()) return;
 
+    if (hasOutOfBoundsObject() && !m_levelComplete) {
+        m_game->loseLife();
+        if (m_game->getLives() > 0) {
+            m_game->getHUD()->showMessage("Object lost! Retry.", 1.5f);
+            m_game->getLevelManager()->reloadCurrentLevel();
+            m_game->getPhysicsWorld()->reset();
+            m_game->getLevelManager()->startLevel();
+            m_game->getLevelManager()->spawnObjects(m_game->getPhysicsWorld());
+            m_game->getHUD()->setLives(m_game->getLives(), m_game->getMaxLives());
+            m_levelTime = 0.0f;
+            m_gravityStrokes.clear();
+        }
+        return;
+    }
+
     if (level->getObjective()->isComplete() && !m_levelComplete) {
         m_levelComplete = true;
         SDL_Log("LEVEL COMPLETE! Changing state...");
@@ -432,6 +449,29 @@ void PlayingState::checkLevelCompletion() {
         }
         // If lives == 0, loseLife() already changed state to GameOver
     }
+}
+
+bool PlayingState::hasOutOfBoundsObject() const {
+    auto* physics = m_game->getPhysicsWorld();
+    if (!physics) {
+        return false;
+    }
+
+    const float margin = 90.0f;
+    const float maxX = static_cast<float>(m_game->getScreenWidth()) + margin;
+    const float maxY = static_cast<float>(m_game->getScreenHeight()) + margin;
+
+    for (const auto& obj : physics->getObjects()) {
+        if (!obj || !obj->isActive() || obj->hasReachedGoal()) {
+            continue;
+        }
+        Vec2 p = obj->getPosition();
+        if (p.x < -margin || p.x > maxX || p.y < -margin || p.y > maxY) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void PlayingState::updateParticles(float deltaTime) {
@@ -496,26 +536,35 @@ void PausedState::enter() {
     float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float centerY = m_game->getScreenHeight() / 2.0f;
-    float buttonWidth = 250.0f * uiScale;
+    float buttonWidth = 260.0f * uiScale;
     float buttonHeight = 60.0f * uiScale;
-    float spacing = 80.0f * uiScale;
+    float spacing = 72.0f * uiScale;
 
     hud->addButton(
-        Rect(centerX - buttonWidth/2, centerY - spacing, buttonWidth, buttonHeight),
+        Rect(centerX - buttonWidth/2, centerY - spacing * 2.0f, buttonWidth, buttonHeight),
         "RESUME",
         [game]() { game->resumeGame(); }
     );
 
     hud->addButton(
-        Rect(centerX - buttonWidth/2, centerY, buttonWidth, buttonHeight),
+        Rect(centerX - buttonWidth/2, centerY - spacing, buttonWidth, buttonHeight),
         "RESTART",
         [game]() { game->restartLevel(); }
     );
 
     hud->addButton(
+        Rect(centerX - buttonWidth/2, centerY, buttonWidth, buttonHeight),
+        "SETTINGS",
+        [game]() { game->changeState(GameStateType::Settings); }
+    );
+
+    hud->addButton(
         Rect(centerX - buttonWidth/2, centerY + spacing, buttonWidth, buttonHeight),
         "MENU",
-        [game]() { game->changeState(GameStateType::Menu); }
+        [game]() {
+            game->setPaused(false);
+            game->changeState(GameStateType::Menu);
+        }
     );
 }
 
@@ -1143,7 +1192,7 @@ void SettingsState::enter() {
         "BACK",
         [game]() { 
             game->saveProgress();
-            game->changeState(GameStateType::Menu); 
+            game->changeState(game->isPaused() ? GameStateType::Paused : GameStateType::Menu); 
         }
     );
 }

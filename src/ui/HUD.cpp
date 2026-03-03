@@ -255,6 +255,12 @@ void HUD::setPauseButtonVisible(bool visible) {
     }
 }
 
+void HUD::setPauseButtonCallback(std::function<void()> callback) {
+    if (m_pauseButton) {
+        m_pauseButton->onClick = callback;
+    }
+}
+
 void HUD::reset() {
     m_score = 0;
     m_displayedScore = 0;
