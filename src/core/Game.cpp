@@ -387,17 +387,31 @@ void Game::loseLife() {
     m_lives--;
     if (m_lives <= 0) {
         m_lives = 0;
+        if (m_hud) {
+            m_hud->setLives(m_lives, m_maxLives);
+        }
         changeState(GameStateType::GameOver);
+        return;
+    }
+
+    if (m_hud) {
+        m_hud->setLives(m_lives, m_maxLives);
     }
 }
 
 void Game::resetLives() {
     m_lives = m_maxLives;
+    if (m_hud) {
+        m_hud->setLives(m_lives, m_maxLives);
+    }
 }
 
 void Game::addLife() {
     if (m_lives < m_maxLives) {
         m_lives++;
+        if (m_hud) {
+            m_hud->setLives(m_lives, m_maxLives);
+        }
     }
 }
 

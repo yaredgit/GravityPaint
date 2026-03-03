@@ -404,10 +404,15 @@ void PlayingState::checkLevelCompletion() {
     
     if (!level || !level->getObjective()) return;
 
-    if (hasOutOfBoundsObject() && !m_levelComplete) {
+    bool objectLost = hasOutOfBoundsObject();
+    bool timedOut = (level->getTimeLimit() > 0.0f && m_levelTime >= level->getTimeLimit());
+    bool objectiveFailed = level->getObjective()->isFailed();
+
+    if ((objectLost || timedOut || objectiveFailed) && !m_levelComplete) {
         m_game->loseLife();
         if (m_game->getLives() > 0) {
-            m_game->getHUD()->showMessage("Object lost! Retry.", 1.5f);
+            const char* failMsg = objectLost ? "Object lost! Retry." : "Time up! Retry.";
+            m_game->getHUD()->showMessage(failMsg, 1.5f);
             m_game->getLevelManager()->reloadCurrentLevel();
             m_game->getPhysicsWorld()->reset();
             m_game->getLevelManager()->startLevel();
@@ -433,21 +438,6 @@ void PlayingState::checkLevelCompletion() {
         m_game->addScore(BASE_GOAL_SCORE + timeBonus + strokeBonus);
         m_game->getLevelManager()->completeLevel(m_game->getScore(), m_levelTime);
         m_game->changeState(GameStateType::LevelComplete);
-    } else if (level->getObjective()->isFailed()) {
-        // Lose a life but continue if lives remain
-        m_game->loseLife();
-        if (m_game->getLives() > 0) {
-            // Reset level and continue playing
-            m_game->getHUD()->showMessage("Try Again!", 1.5f);
-            m_game->getLevelManager()->reloadCurrentLevel();
-            m_game->getPhysicsWorld()->reset();
-            m_game->getLevelManager()->startLevel();
-            m_game->getLevelManager()->spawnObjects(m_game->getPhysicsWorld());
-            m_game->getHUD()->setLives(m_game->getLives(), m_game->getMaxLives());
-            m_levelTime = 0.0f;
-            m_gravityStrokes.clear();
-        }
-        // If lives == 0, loseLife() already changed state to GameOver
     }
 }
 
