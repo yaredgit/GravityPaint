@@ -443,20 +443,28 @@ void Renderer::drawGoalZone(const Rect& zone) {
     static float time = 0;
     time += 0.016f;
 
-    // Background
-    Color bgColor = Color::green();
-    bgColor.a = static_cast<uint8_t>(50 + 30 * std::sin(time * 3.0f));
-    drawRect(zone, bgColor, true);
+    float pulse = 0.5f + 0.5f * std::sin(time * 4.0f);
+
+    // Outer bloom
+    Rect outer(zone.x - 10.0f, zone.y - 10.0f, zone.w + 20.0f, zone.h + 20.0f);
+    drawRect(outer, Color(70, 220, 255, static_cast<uint8_t>(40 + pulse * 25)), true);
+
+    // Core panel fill
+    drawGradientRect(
+        zone,
+        Color(20, 80, 110, 170),
+        Color(25, 110, 145, 180),
+        Color(10, 40, 60, 160),
+        Color(20, 70, 95, 170)
+    );
 
     // Pulsing border
-    Color borderColor = Color::green();
-    borderColor.a = static_cast<uint8_t>(150 + 100 * std::sin(time * 5.0f));
-    drawRect(zone, borderColor, false);
+    drawRect(zone, Color(110, 245, 255, static_cast<uint8_t>(170 + pulse * 80)), false);
 
-    // Inner glow lines
-    float inset = 10.0f + 5.0f * std::sin(time * 2.0f);
+    // Inner scan frame
+    float inset = 8.0f + 4.0f * std::sin(time * 2.0f);
     Rect innerZone(zone.x + inset, zone.y + inset, zone.w - inset * 2, zone.h - inset * 2);
-    drawRect(innerZone, Color(100, 255, 100, 80), false);
+    drawRect(innerZone, Color(140, 255, 255, 100), false);
 }
 
 void Renderer::drawTrail(const std::vector<Vec2>& trail, const Color& color) {
@@ -643,20 +651,36 @@ void Renderer::drawStarfield(float time) {
 
     for (size_t i = 0; i < m_stars.size(); ++i) {
         float twinkle = 0.5f + 0.5f * std::sin(time * 3.0f + i * 0.5f);
-        uint8_t brightness = static_cast<uint8_t>(100 + 155 * twinkle);
-        
-        SDL_SetRenderDrawColor(m_renderer, brightness, brightness, brightness, 255);
+        bool warm = (i % 9 == 0);
+        uint8_t brightness = static_cast<uint8_t>(90 + 150 * twinkle);
+        uint8_t r = warm ? static_cast<uint8_t>(130 + 90 * twinkle) : brightness;
+        uint8_t g = warm ? static_cast<uint8_t>(120 + 70 * twinkle) : static_cast<uint8_t>(brightness + 10);
+        uint8_t b = warm ? static_cast<uint8_t>(150 + 40 * twinkle) : static_cast<uint8_t>(160 + 90 * twinkle);
+
+        SDL_SetRenderDrawColor(m_renderer, r, g, b, 255);
         SDL_RenderDrawPointF(m_renderer, m_stars[i].x, m_stars[i].y);
+
+        // Sparse soft glow points for depth.
+        if (i % 11 == 0) {
+            SDL_SetRenderDrawColor(m_renderer, 150, 190, 245, static_cast<uint8_t>(30 + twinkle * 38));
+            SDL_FRect glow = {m_stars[i].x - 1.0f, m_stars[i].y - 1.0f, 3.0f, 3.0f};
+            SDL_RenderFillRectF(m_renderer, &glow);
+        }
     }
 }
 
 void Renderer::drawGrid(float cellSize, const Color& color) {
-    SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
-
-    for (float x = 0; x < m_width; x += cellSize) {
+    int xIndex = 0;
+    for (float x = 0; x < m_width; x += cellSize, ++xIndex) {
+        uint8_t alpha = (xIndex % 5 == 0) ? static_cast<uint8_t>(std::min(255, color.a + 35)) : color.a;
+        SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, alpha);
         SDL_RenderDrawLineF(m_renderer, x, 0, x, static_cast<float>(m_height));
     }
-    for (float y = 0; y < m_height; y += cellSize) {
+
+    int yIndex = 0;
+    for (float y = 0; y < m_height; y += cellSize, ++yIndex) {
+        uint8_t alpha = (yIndex % 5 == 0) ? static_cast<uint8_t>(std::min(255, color.a + 35)) : color.a;
+        SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, alpha);
         SDL_RenderDrawLineF(m_renderer, 0, y, static_cast<float>(m_width), y);
     }
 }

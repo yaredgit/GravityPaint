@@ -29,6 +29,7 @@ public:
 
     void update(float deltaTime);
     void render(Renderer* renderer);
+    void setScreenSize(int screenWidth, int screenHeight);
 
     // Touch handling
     bool handleTouch(const TouchPoint& touch);
@@ -87,9 +88,12 @@ private:
     void renderButtons(Renderer* renderer);
     void renderScorePopups(Renderer* renderer);
     void updateScorePopups(float deltaTime);
+    void updatePauseButtonLayout();
+    float scaled(float value) const { return value * m_uiScale; }
 
     int m_screenWidth;
     int m_screenHeight;
+    float m_uiScale = 1.0f;
 
     // Score
     int m_score = 0;

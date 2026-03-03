@@ -165,6 +165,9 @@ void Game::processEvents() {
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                     m_screenWidth = event.window.data1;
                     m_screenHeight = event.window.data2;
+                    if (m_hud) {
+                        m_hud->setScreenSize(m_screenWidth, m_screenHeight);
+                    }
                 }
                 break;
 

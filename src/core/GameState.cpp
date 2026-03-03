@@ -13,6 +13,13 @@
 
 namespace GravityPaint {
 
+namespace {
+float getUiScale(const Game* game) {
+    float shortSide = static_cast<float>(std::min(game->getScreenWidth(), game->getScreenHeight()));
+    return std::clamp(shortSide / 900.0f, 0.72f, 1.25f);
+}
+}
+
 // MenuState
 MenuState::MenuState(Game* game) : GameState(game) {}
 
@@ -34,11 +41,12 @@ void MenuState::enter() {
     hud->setVisible(true);
     
     Game* game = m_game;
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float startY = m_game->getScreenHeight() * 0.45f;
-    float buttonWidth = 300.0f;
-    float buttonHeight = 65.0f;
-    float spacing = 80.0f;
+    float buttonWidth = 300.0f * uiScale;
+    float buttonHeight = 65.0f * uiScale;
+    float spacing = 80.0f * uiScale;
 
     hud->addButton(
         Rect(centerX - buttonWidth/2, startY, buttonWidth, buttonHeight),
@@ -81,29 +89,32 @@ void MenuState::update(float deltaTime) {
 
 void MenuState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float screenH = static_cast<float>(m_game->getScreenHeight());
     
     // Gradient background
     Rect screenRect(0, 0, static_cast<float>(m_game->getScreenWidth()), screenH);
     renderer->drawGradientRect(screenRect, 
-                               Color(15, 20, 35), Color(25, 15, 40),
-                               Color(10, 25, 30), Color(20, 20, 30));
+                               Color(10, 18, 32), Color(26, 24, 44),
+                               Color(8, 14, 24), Color(18, 20, 34));
+    renderer->drawStarfield(m_titlePulse);
+    renderer->drawGrid(56.0f, Color(70, 110, 140, 28));
     
     // Draw title with pulse effect
     float pulse = 1.0f + 0.08f * std::sin(m_titlePulse);
     renderer->drawTextCentered(
         "GRAVITY PAINT",
         Vec2(centerX, screenH * 0.2f),
-        Color(100, 200, 255),
-        56.0f * pulse
+        Color(205, 235, 255),
+        56.0f * pulse * uiScale
     );
 
     renderer->drawTextCentered(
         "Swipe to Control Gravity",
         Vec2(centerX, screenH * 0.28f),
-        Color(150, 150, 180),
-        20.0f
+        Color(170, 182, 210),
+        20.0f * uiScale
     );
     
     // Show high score
@@ -111,8 +122,8 @@ void MenuState::render() {
         renderer->drawTextCentered(
             "High Score: " + std::to_string(m_game->getHighScore()),
             Vec2(centerX, screenH * 0.35f),
-            Color::yellow(),
-            18.0f
+            Color(250, 220, 120),
+            18.0f * uiScale
         );
     }
 
@@ -121,9 +132,9 @@ void MenuState::render() {
     Vec2 center(m_game->getScreenWidth() / 2.0f, m_game->getScreenHeight() * 0.15f);
     for (int i = 0; i < 8; ++i) {
         float angle = (i / 8.0f) * 3.14159f * 2.0f + time * 0.5f;
-        float radius = 80.0f + 20.0f * std::sin(time + i);
+        float radius = (80.0f + 20.0f * std::sin(time + i)) * uiScale;
         Vec2 pos = center + Vec2(std::cos(angle), std::sin(angle)) * radius;
-        renderer->drawCircle(pos, 10.0f, Color::cyan(), false);
+        renderer->drawCircle(pos, 10.0f * uiScale, Color(130, 235, 255, 180), false);
     }
 }
 
@@ -185,8 +196,9 @@ void PlayingState::enter() {
     hud->setVisible(true);
     
     Game* game = m_game;
+    float uiScale = getUiScale(m_game);
     hud->addButton(
-        Rect(m_game->getScreenWidth() - 120, 50, 110, 40),
+        Rect(m_game->getScreenWidth() - (120.0f * uiScale), 50.0f * uiScale, 110.0f * uiScale, 40.0f * uiScale),
         "RESTART",
         [game]() { 
             game->restartLevel();
@@ -261,13 +273,14 @@ void PlayingState::render() {
     Rect screenRect(0, 0, static_cast<float>(m_game->getScreenWidth()), 
                     static_cast<float>(m_game->getScreenHeight()));
     renderer->drawGradientRect(screenRect, 
-                               Color(20, 20, 40),    // Top left - dark blue
-                               Color(30, 20, 50),    // Top right - dark purple
-                               Color(15, 30, 45),    // Bottom left - dark teal
-                               Color(25, 25, 35));   // Bottom right - dark gray
+                               Color(6, 12, 24),
+                               Color(10, 20, 38),
+                               Color(4, 8, 18),
+                               Color(6, 14, 28));
 
     // Draw background grid
-    renderer->drawGrid(50.0f, Color(50, 50, 80, 100));
+    renderer->drawStarfield(m_levelTime);
+    renderer->drawGrid(50.0f, Color(45, 150, 190, 70));
 
     // Draw goal zone
     if (level) {
@@ -480,11 +493,12 @@ void PausedState::enter() {
     hud->setVisible(true);
 
     Game* game = m_game;
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float centerY = m_game->getScreenHeight() / 2.0f;
-    float buttonWidth = 250.0f;
-    float buttonHeight = 60.0f;
-    float spacing = 80.0f;
+    float buttonWidth = 250.0f * uiScale;
+    float buttonHeight = 60.0f * uiScale;
+    float spacing = 80.0f * uiScale;
 
     hud->addButton(
         Rect(centerX - buttonWidth/2, centerY - spacing, buttonWidth, buttonHeight),
@@ -513,19 +527,21 @@ void PausedState::update(float /*deltaTime*/) {}
 
 void PausedState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     
     // Dim overlay
     renderer->drawRect(
         Rect(0, 0, static_cast<float>(m_game->getScreenWidth()), 
              static_cast<float>(m_game->getScreenHeight())),
-        Color(0, 0, 0, 180)
+        Color(0, 6, 15, 175)
     );
+    renderer->drawGrid(64.0f, Color(60, 115, 145, 24));
 
     renderer->drawTextCentered(
         "PAUSED",
         Vec2(m_game->getScreenWidth() / 2.0f, m_game->getScreenHeight() * 0.3f),
-        Color::white(),
-        48.0f
+        Color(170, 245, 255),
+        48.0f * uiScale
     );
 }
 
@@ -550,9 +566,10 @@ void LevelCompleteState::enter() {
 
     float centerX = m_game->getScreenWidth() / 2.0f;
     float buttonY = m_game->getScreenHeight() * 0.7f;
-    float buttonWidth = 200.0f;
-    float buttonHeight = 60.0f;
-    float spacing = 220.0f;
+    float uiScale = getUiScale(m_game);
+    float buttonWidth = 200.0f * uiScale;
+    float buttonHeight = 60.0f * uiScale;
+    float spacing = 220.0f * uiScale;
 
     Game* game = m_game;  // Capture game pointer, not 'this'
     
@@ -581,25 +598,33 @@ void LevelCompleteState::update(float deltaTime) {
 
 void LevelCompleteState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
+    Rect screenRect(0, 0, static_cast<float>(m_game->getScreenWidth()), 
+                    static_cast<float>(m_game->getScreenHeight()));
+    renderer->drawGradientRect(screenRect,
+                               Color(10, 20, 36), Color(24, 42, 54),
+                               Color(8, 14, 24), Color(16, 30, 42));
+    renderer->drawStarfield(m_animationTime);
+    renderer->drawGrid(58.0f, Color(90, 130, 150, 24));
 
     renderer->drawTextCentered(
         "LEVEL COMPLETE!",
         Vec2(centerX, m_game->getScreenHeight() * 0.25f),
-        Color::green(),
-        48.0f
+        Color(165, 235, 195),
+        48.0f * uiScale
     );
 
     // Animated stars
     float starY = m_game->getScreenHeight() * 0.4f;
-    float starSpacing = 80.0f;
+    float starSpacing = 80.0f * uiScale;
     for (int i = 0; i < 3; ++i) {
         float starX = centerX + (i - 1) * starSpacing;
         float delay = i * 0.3f;
         float scale = (m_animationTime > delay) ? std::min((m_animationTime - delay) * 3.0f, 1.0f) : 0.0f;
         
-        Color starColor = (i < m_starsEarned) ? Color::yellow() : Color(80, 80, 80);
-        float radius = 25.0f * scale;
+        Color starColor = (i < m_starsEarned) ? Color(255, 222, 160) : Color(90, 95, 110);
+        float radius = 25.0f * uiScale * scale;
         
         // Draw star shape (simplified as circle for now)
         renderer->drawCircle(Vec2(starX, starY), radius, starColor, true);
@@ -609,8 +634,8 @@ void LevelCompleteState::render() {
     renderer->drawTextCentered(
         "Score: " + std::to_string(m_game->getScore()),
         Vec2(centerX, m_game->getScreenHeight() * 0.55f),
-        Color::white(),
-        36.0f
+        Color(215, 245, 255),
+        36.0f * uiScale
     );
 }
 
@@ -631,9 +656,10 @@ void GameOverState::enter() {
     Game* game = m_game;
     float centerX = m_game->getScreenWidth() / 2.0f;
     float buttonY = m_game->getScreenHeight() * 0.6f;
-    float buttonWidth = 200.0f;
-    float buttonHeight = 60.0f;
-    float spacing = 220.0f;
+    float uiScale = getUiScale(m_game);
+    float buttonWidth = 200.0f * uiScale;
+    float buttonHeight = 60.0f * uiScale;
+    float spacing = 220.0f * uiScale;
 
     hud->addButton(
         Rect(centerX - spacing/2 - buttonWidth/2, buttonY, buttonWidth, buttonHeight),
@@ -666,18 +692,20 @@ void GameOverState::update(float deltaTime) {
 
 void GameOverState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     float screenW = static_cast<float>(m_game->getScreenWidth());
     float screenH = static_cast<float>(m_game->getScreenHeight());
 
     // Gradient background with red tint
     Rect screenRect(0, 0, screenW, screenH);
     renderer->drawGradientRect(screenRect, 
-                               Color(40, 10, 10), Color(50, 15, 20),
-                               Color(30, 5, 5), Color(45, 10, 15));
+                               Color(30, 6, 12), Color(46, 10, 20),
+                               Color(16, 2, 8), Color(26, 4, 14));
+    renderer->drawGrid(55.0f, Color(190, 65, 90, 45));
 
     // Red overlay fade
     uint8_t alpha = static_cast<uint8_t>(m_fadeIn * 100);
-    renderer->drawRect(screenRect, Color(100, 0, 0, alpha));
+    renderer->drawRect(screenRect, Color(110, 8, 20, alpha));
 
     float centerX = screenW / 2.0f;
 
@@ -685,21 +713,21 @@ void GameOverState::render() {
         "GAME OVER",
         Vec2(centerX, screenH * 0.25f),
         Color(255, 80, 80),
-        52.0f
+        52.0f * uiScale
     );
 
     renderer->drawTextCentered(
         "Out of Lives!",
         Vec2(centerX, screenH * 0.35f),
-        Color(200, 150, 150),
-        24.0f
+        Color(225, 165, 175),
+        24.0f * uiScale
     );
 
     renderer->drawTextCentered(
         "Final Score: " + std::to_string(m_game->getScore()),
         Vec2(centerX, screenH * 0.45f),
         Color::white(),
-        32.0f
+        32.0f * uiScale
     );
     
     // Show high score if beaten
@@ -707,8 +735,8 @@ void GameOverState::render() {
         renderer->drawTextCentered(
             "NEW HIGH SCORE!",
             Vec2(centerX, screenH * 0.52f),
-            Color::yellow(),
-            24.0f
+            Color(255, 230, 135),
+            24.0f * uiScale
         );
     }
 }
@@ -758,6 +786,7 @@ void TutorialState::update(float deltaTime) {
 
 void TutorialState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float centerY = m_game->getScreenHeight() / 2.0f;
 
@@ -766,18 +795,18 @@ void TutorialState::render() {
         case 0: {
             // Show swipe gesture
             float t = std::fmod(m_stepTime, 2.0f) / 2.0f;
-            Vec2 start(centerX - 100, centerY);
-            Vec2 end(centerX + 100, centerY - 50);
+            Vec2 start(centerX - 100.0f * uiScale, centerY);
+            Vec2 end(centerX + 100.0f * uiScale, centerY - 50.0f * uiScale);
             Vec2 current = Vec2::lerp(start, end, t);
             
-            renderer->drawLine(start, current, Color::cyan(), 3.0f);
-            renderer->drawCircle(current, 15.0f, Color::cyan(), true);
+            renderer->drawLine(start, current, Color::cyan(), 3.0f * uiScale);
+            renderer->drawCircle(current, 15.0f * uiScale, Color::cyan(), true);
             break;
         }
         case 1: {
             // Show goal zone
-            renderer->drawGoalZone(Rect(centerX - 75, centerY + 100, 150, 100));
-            renderer->drawCircle(Vec2(centerX, centerY - 50), 20.0f, Color::white(), true);
+            renderer->drawGoalZone(Rect(centerX - 75.0f * uiScale, centerY + 100.0f * uiScale, 150.0f * uiScale, 100.0f * uiScale));
+            renderer->drawCircle(Vec2(centerX, centerY - 50.0f * uiScale), 20.0f * uiScale, Color::white(), true);
             break;
         }
         case 2: {
@@ -787,8 +816,8 @@ void TutorialState::render() {
                 float delay = i * 0.3f;
                 if (t > delay) {
                     float scale = std::min((t - delay) * 2.0f, 1.0f);
-                    Vec2 pos(centerX + (i - 1) * 60, centerY);
-                    renderer->drawCircle(pos, 20.0f * scale, Color::orange(), true);
+                    Vec2 pos(centerX + (i - 1) * 60.0f * uiScale, centerY);
+                    renderer->drawCircle(pos, 20.0f * uiScale * scale, Color::orange(), true);
                 }
             }
             break;
@@ -799,7 +828,7 @@ void TutorialState::render() {
         "TAP TO CONTINUE",
         Vec2(centerX, m_game->getScreenHeight() * 0.85f),
         Color(150, 150, 150),
-        20.0f
+        20.0f * uiScale
     );
 }
 
@@ -825,11 +854,12 @@ void DifficultySelectState::enter() {
     hud->setVisible(true);
     
     Game* game = m_game;
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float startY = m_game->getScreenHeight() * 0.35f;
-    float buttonWidth = 280.0f;
-    float buttonHeight = 70.0f;
-    float spacing = 90.0f;
+    float buttonWidth = 280.0f * uiScale;
+    float buttonHeight = 70.0f * uiScale;
+    float spacing = 90.0f * uiScale;
     
     // Lambda to start game based on mode
     auto startWithDifficulty = [game](Difficulty diff) {
@@ -882,14 +912,17 @@ void DifficultySelectState::update(float deltaTime) {
 
 void DifficultySelectState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float screenH = static_cast<float>(m_game->getScreenHeight());
 
     // Gradient background
     Rect screenRect(0, 0, static_cast<float>(m_game->getScreenWidth()), screenH);
     renderer->drawGradientRect(screenRect, 
-                               Color(25, 25, 50), Color(35, 25, 55),
-                               Color(20, 35, 50), Color(30, 30, 45));
+                               Color(12, 18, 34), Color(28, 30, 50),
+                               Color(8, 12, 24), Color(18, 24, 40));
+    renderer->drawStarfield(m_animTime);
+    renderer->drawGrid(56.0f, Color(88, 120, 150, 26));
 
     // Show game mode
     std::string modeText;
@@ -899,13 +932,13 @@ void DifficultySelectState::render() {
         case GameMode::TimeAttack: modeText = "TIME ATTACK"; break;
         case GameMode::Zen: modeText = "ZEN MODE"; break;
     }
-    renderer->drawTextCentered(modeText, Vec2(centerX, screenH * 0.12f), Color(100, 180, 255), 24.0f);
+    renderer->drawTextCentered(modeText, Vec2(centerX, screenH * 0.12f), Color(190, 215, 255), 24.0f * uiScale);
 
     renderer->drawTextCentered(
         "SELECT DIFFICULTY",
         Vec2(centerX, screenH * 0.2f),
-        Color::white(),
-        36.0f
+        Color(225, 238, 255),
+        36.0f * uiScale
     );
     
     // Mode description
@@ -916,7 +949,7 @@ void DifficultySelectState::render() {
         case GameMode::TimeAttack: modeDesc = "Race against the clock!"; break;
         case GameMode::Zen: modeDesc = "No timer, no pressure, just play"; break;
     }
-    renderer->drawTextCentered(modeDesc, Vec2(centerX, screenH * 0.75f), Color(150, 150, 150), 16.0f);
+    renderer->drawTextCentered(modeDesc, Vec2(centerX, screenH * 0.75f), Color(170, 182, 205), 16.0f * uiScale);
 }
 
 void DifficultySelectState::handleInput(const TouchPoint& touch) {
@@ -937,12 +970,13 @@ void LevelSelectState::enter() {
     Game* game = m_game;
     float screenW = static_cast<float>(m_game->getScreenWidth());
     float screenH = static_cast<float>(m_game->getScreenHeight());
+    float uiScale = getUiScale(m_game);
     
     // Grid of level buttons (5 columns x 4 rows visible)
     int cols = 5;
     int visibleRows = 4;
-    float buttonSize = 70.0f;
-    float padding = 15.0f;
+    float buttonSize = 70.0f * uiScale;
+    float padding = 15.0f * uiScale;
     float gridWidth = cols * (buttonSize + padding) - padding;
     float startX = (screenW - gridWidth) / 2;
     float startY = screenH * 0.25f;
@@ -980,15 +1014,23 @@ void LevelSelectState::enter() {
         
         // Color based on completion status
         if (!unlocked) {
-            button->normalColor = Color(50, 50, 50, 200);
+            button->normalColor = Color(52, 54, 64, 190);
+            button->hoverColor = Color(64, 66, 78, 205);
+            button->pressedColor = Color(78, 80, 92, 215);
         } else if (progress.completed) {
-            button->normalColor = Color(40, 80, 40, 200);
+            button->normalColor = Color(70, 112, 96, 210);
+            button->hoverColor = Color(88, 136, 118, 220);
+            button->pressedColor = Color(98, 150, 130, 228);
+        } else {
+            button->normalColor = Color(58, 82, 112, 205);
+            button->hoverColor = Color(74, 102, 132, 220);
+            button->pressedColor = Color(90, 120, 150, 230);
         }
     }
     
     // Back button
     hud->addButton(
-        Rect(screenW/2 - 100, screenH - 80, 200, 50),
+        Rect(screenW/2 - 100.0f * uiScale, screenH - 90.0f * uiScale, 200.0f * uiScale, 58.0f * uiScale),
         "BACK",
         [game]() { game->changeState(GameStateType::DifficultySelect); }
     );
@@ -1004,20 +1046,23 @@ void LevelSelectState::update(float deltaTime) {
 
 void LevelSelectState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float screenH = static_cast<float>(m_game->getScreenHeight());
 
     // Gradient background
     Rect screenRect(0, 0, static_cast<float>(m_game->getScreenWidth()), screenH);
     renderer->drawGradientRect(screenRect, 
-                               Color(20, 30, 45), Color(30, 25, 50),
-                               Color(15, 25, 40), Color(25, 20, 45));
+                               Color(10, 18, 34), Color(24, 28, 46),
+                               Color(8, 12, 24), Color(16, 20, 36));
+    renderer->drawStarfield(m_animTime);
+    renderer->drawGrid(56.0f, Color(90, 120, 145, 24));
 
     renderer->drawTextCentered(
         "SELECT LEVEL",
         Vec2(centerX, screenH * 0.1f),
-        Color::white(),
-        36.0f
+        Color(225, 238, 255),
+        36.0f * uiScale
     );
     
     // Show total stars
@@ -1026,8 +1071,8 @@ void LevelSelectState::render() {
     renderer->drawTextCentered(
         "Stars: " + std::to_string(totalStars) + "/" + std::to_string(maxStars),
         Vec2(centerX, screenH * 0.17f),
-        Color::yellow(),
-        20.0f
+        Color(255, 220, 125),
+        20.0f * uiScale
     );
 }
 
@@ -1046,11 +1091,12 @@ void SettingsState::enter() {
     hud->setVisible(true);
     
     Game* game = m_game;
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
     float startY = m_game->getScreenHeight() * 0.3f;
-    float buttonWidth = 280.0f;
-    float buttonHeight = 60.0f;
-    float spacing = 80.0f;
+    float buttonWidth = 280.0f * uiScale;
+    float buttonHeight = 60.0f * uiScale;
+    float spacing = 80.0f * uiScale;
 
     // Sound toggle
     std::string soundText = game->isSoundEnabled() ? "SOUND: ON" : "SOUND: OFF";
@@ -1112,20 +1158,23 @@ void SettingsState::update(float deltaTime) {
 
 void SettingsState::render() {
     auto* renderer = m_game->getRenderer();
+    float uiScale = getUiScale(m_game);
     float centerX = m_game->getScreenWidth() / 2.0f;
 
     // Gradient background
     Rect screenRect(0, 0, static_cast<float>(m_game->getScreenWidth()), 
                     static_cast<float>(m_game->getScreenHeight()));
     renderer->drawGradientRect(screenRect, 
-                               Color(30, 30, 40), Color(35, 30, 45),
-                               Color(25, 30, 35), Color(30, 25, 40));
+                               Color(12, 18, 30), Color(24, 26, 40),
+                               Color(8, 12, 22), Color(16, 18, 30));
+    renderer->drawStarfield(m_animTime);
+    renderer->drawGrid(56.0f, Color(90, 120, 145, 24));
 
     renderer->drawTextCentered(
         "SETTINGS",
         Vec2(centerX, m_game->getScreenHeight() * 0.15f),
-        Color::white(),
-        42.0f
+        Color(225, 238, 255),
+        42.0f * uiScale
     );
 }
 
